@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}编辑商品 - 宝黄天{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>编辑商品信息</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- 商品当前图片 -->
+                        <div class="mb-4 text-center">
+                            <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" 
+                                 alt="{{ item.title }}" 
+                                 class="img-fluid rounded" style="max-height: 300px; object-fit: cover;">
+                            <p class="text-muted mt-2">当前商品图片</p>
+                        </div>
+                        
+                        <!-- 商品标题 -->
+                        <div class="mb-4">
+                            {{ form.title.label(class="form-label") }}
+                            {% if form.title.errors %}
+                                {{ form.title(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.title.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.title(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 商品价格 -->
+                        <div class="mb-4">
+                            {{ form.price.label(class="form-label") }}
+                            {% if form.price.errors %}
+                                {{ form.price(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.price.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.price(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 库存数量 -->
+                        <div class="mb-4">
+                            {{ form.stock.label(class="form-label") }}
+                            {% if form.stock.errors %}
+                                {{ form.stock(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.stock.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.stock(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 商品描述 -->
+                        <div class="mb-4">
+                            {{ form.description.label(class="form-label") }}
+                            {% if form.description.errors %}
+                                {{ form.description(class="form-control is-invalid", rows=5) }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.description.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.description(class="form-control", rows=5) }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 商品图片上传 -->
+                        <div class="mb-4">
+                            {{ form.picture.label(class="form-label") }}
+                            {{ form.picture(class="form-control") }}
+                            {% if form.picture.errors %}
+                                {% for error in form.picture.errors %}
+                                    <span class="text-danger">{{ error }}</span></br>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="text-muted mt-1">不修改图片请保持为空</p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">保存修改</button>
+                            <a href="{{ url_for('main.profile') }}" class="btn btn-secondary btn-lg ms-2">取消</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

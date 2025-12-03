@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}宝黄天 - 首页{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">欢迎来到宝黄天</h1>
+        
+        <!-- 交易须知 -->
+        <div class="card mb-5">
+            <div class="card-header bg-warning text-white">
+                <h3 class="text-center">宝黄天交易须知</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <img src="{{ url_for('static', filename='uploads/宝黄天.png') }}" class="img-fluid rounded" alt="宝黄天交易须知">
+                    </div>
+                    <div class="col-md-6">
+                        <h5>交易规则</h5>
+                        <ul>
+                            <li>请确保商品信息真实有效</li>
+                            <li>交易前请仔细核对商品详情</li>
+                            <li>建议选择安全的交易方式</li>
+                            <li>如有纠纷，请及时联系管理员</li>
+                            <li>禁止发布违法违规信息</li>
+                        </ul>
+                        <h5>安全提示</h5>
+                        <ul>
+                            <li>请勿轻易相信陌生人</li>
+                            <li>保护好个人隐私信息</li>
+                            <li>线下交易建议选择公共场所</li>
+                            <li>保留好交易凭证</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快速入口 -->
+        <div class="row mt-5">
+            <div class="col-md-4 text-center">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <i class="fa fa-shopping-bag fa-4x mb-3" style="color: #007bff;"></i>
+                        <h5 class="card-title">进入市场</h5>
+                        <p class="card-text">浏览最新商品，发现更多好物</p>
+                        <a href="{{ url_for('main.market') }}" class="btn btn-primary">立即查看</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <i class="fa fa-search fa-4x mb-3" style="color: #28a745;"></i>
+                        <h5 class="card-title">求购信息</h5>
+                        <p class="card-text">发布求购需求，找到你想要的商品</p>
+                        <a href="{{ url_for('main.requests') }}" class="btn btn-success">立即查看</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <i class="fa fa-comments fa-4x mb-3" style="color: #17a2b8;"></i>
+                        <h5 class="card-title">交流广场</h5>
+                        <p class="card-text">参与讨论，分享你的想法和经验</p>
+                        <a href="{{ url_for('main.square') }}" class="btn btn-info">立即加入</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

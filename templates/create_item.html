@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">发布新商品</h2>
+        
+        <!-- 从库存添加按钮 -->
+        <div class="mb-4">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#stockModal">
+                <i class="fa fa-box"></i> 从库存添加商品
+            </button>
+        </div>
+        
+        <!-- 手动输入表单 -->
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.price.label(class="form-label") }}
+                {{ form.price(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.stock.label(class="form-label") }}
+                {{ form.stock(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control", rows=5) }}
+            </div>
+            <div class="mb-3">
+                {{ form.picture.label(class="form-label") }}
+                {{ form.picture(class="form-control") }}
+            </div>
+            <div class="d-grid">
+                {{ form.submit(class="btn btn-success btn-lg") }}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 从库存添加商品的隐藏表单 -->
+<form method="POST" action="{{ url_for('main.add_stock_item') }}" id="stockItemForm" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="stock_id" id="stock_id">
+    <input type="hidden" name="stock_quantity" id="stock_quantity">
+    <input type="hidden" name="stock_price" id="stock_price">
+    <input type="hidden" name="use_stock_description" id="use_stock_description">
+</form>
+
+<!-- 库存模态框 -->
+<div class="modal fade" id="stockModal" tabindex="-1" aria-labelledby="stockModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="stockModalLabel">我的库存物品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if stocks %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {% for stock in stocks %}
+                            <div class="col">
+                                <div class="card h-100" style="cursor: pointer; transition: transform 0.2s;" onclick="selectStockItem({{ stock.id }}, '{{ stock.name }}', {{ stock.quantity }}, '{{ stock.description }}', '{{ stock.image_file }}')">
+                                    <img src="{{ url_for('static', filename='uploads/' + stock.image_file) }}" 
+                                         class="card-img-top" alt="{{ stock.name }}" 
+                                         style="height: 150px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ stock.name }}</h5>
+                                        <p class="card-text text-primary font-weight-bold">库存: {{ stock.quantity }}</p>
+                                        {% if stock.description %}
+                                        <p class="card-text small">{{ stock.description }}</p>
+                                        {% endif %}
+                                        <p class="card-text text-muted small">{{ stock.date_added.strftime('%Y-%m-%d') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fa fa-inventory-empty fa-5x text-muted mb-3"></i>
+                        <p class="text-muted">您还没有添加任何库存物品</p>
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('main.profile') }}#my-stocks'">
+                            <i class="fa fa-plus"></i> 去添加库存
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 选择库存物品后的确认模态框 -->
+<div class="modal fade" id="confirmStockModal" tabindex="-1" aria-labelledby="confirmStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="confirmStockModalLabel">确认发布商品</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>商品信息</h6>
+                    <p id="confirm_stock_name"></p>
+                    <p id="confirm_stock_description"></p>
+                </div>
+                <div class="mb-3">
+                    <label for="confirm_stock_quantity" class="form-label">发布数量</label>
+                    <input type="number" class="form-control" id="confirm_stock_quantity" min="1" max="100">
+                    <small class="text-muted" id="stock_quantity_limit"></small>
+                </div>
+                <div class="mb-3">
+                    <label for="confirm_stock_price" class="form-label">价格 (元)</label>
+                    <input type="number" class="form-control" id="confirm_stock_price" step="0.01" min="0.01" required>
+                </div>
+                <div class="mb-3">
+                    <label for="confirm_use_stock_description" class="form-check-label">
+                        <input type="checkbox" class="form-check-input" id="confirm_use_stock_description" checked> 使用库存物品描述
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-success" onclick="confirmStockItem()">确认发布</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 存储选中的库存物品信息
+let selectedStock = {
+    id: null,
+    name: '',
+    quantity: 0,
+    description: '',
+    image_file: ''
+};
+
+// 选择库存物品
+function selectStockItem(id, name, quantity, description, image_file) {
+    selectedStock = {
+        id: id,
+        name: name,
+        quantity: quantity,
+        description: description,
+        image_file: image_file
+    };
+    
+    // 填充确认模态框
+    document.getElementById('confirm_stock_name').textContent = `名称: ${name}`;
+    document.getElementById('confirm_stock_description').textContent = `描述: ${description || '无描述'}`;
+    document.getElementById('confirm_stock_quantity').value = 1;
+    document.getElementById('stock_quantity_limit').textContent = `库存数量: ${quantity}，最多可发布 ${quantity} 件`;
+    document.getElementById('confirm_stock_quantity').max = quantity;
+    
+    // 关闭库存模态框，打开确认模态框
+    const stockModal = new bootstrap.Modal(document.getElementById('stockModal'));
+    stockModal.hide();
+    
+    setTimeout(() => {
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmStockModal'));
+        confirmModal.show();
+    }, 500);
+}
+
+// 确认库存物品
+function confirmStockItem() {
+    const quantity = parseInt(document.getElementById('confirm_stock_quantity').value);
+    const price = document.getElementById('confirm_stock_price').value;
+    const useStockDescription = document.getElementById('confirm_use_stock_description').checked;
+    
+    // 验证输入
+    if (!price) {
+        alert('请输入价格');
+        return;
+    }
+    
+    if (quantity < 1 || quantity > selectedStock.quantity) {
+        alert(`发布数量必须在 1 到 ${selectedStock.quantity} 之间`);
+        return;
+    }
+    
+    // 设置隐藏表单字段
+    document.getElementById('stock_id').value = selectedStock.id;
+    document.getElementById('stock_quantity').value = quantity;
+    document.getElementById('stock_price').value = price;
+    document.getElementById('use_stock_description').value = useStockDescription ? 'on' : 'off';
+    
+    // 提交隐藏表单
+    document.getElementById('stockItemForm').submit();
+    
+    // 关闭确认模态框
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmStockModal'));
+    confirmModal.hide();
+}
+</script>
+{% endblock %}

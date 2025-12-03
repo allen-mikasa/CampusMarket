@@ -1,0 +1,656 @@
+{% extends "base.html" %}
+{% block title %}交流广场 - 宝黄天{% endblock %}
+
+{% block content %}
+<style>
+/* 隐藏回复项的样式 */
+.reply-item.reply-hidden {
+    display: none !important;
+}
+</style>
+
+<script>
+// 保存滚动位置到localStorage
+function saveScrollPosition() {
+    // 使用更精确的选择器
+    const chatContainer = document.querySelector('.card-body[style*="overflow-y: auto"]');
+    if (chatContainer) {
+        const scrollPosition = chatContainer.scrollTop;
+        localStorage.setItem('chatScrollTop', scrollPosition);
+        console.log('滚动位置已保存:', scrollPosition);
+    } else {
+        console.error('未找到聊天容器元素');
+    }
+}
+
+// 恢复滚动位置
+function restoreScrollPosition() {
+    // 使用更精确的选择器
+    const chatContainer = document.querySelector('.card-body[style*="overflow-y: auto"]');
+    if (chatContainer) {
+        // 检查是否有新消息标记
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('new_message') === 'true') {
+            // 新消息自动滚动到底部
+            console.log('新消息，滚动到底部');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            // 清除新消息标记
+            history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            // 否则恢复之前的滚动位置
+            const scrollTop = localStorage.getItem('chatScrollTop');
+            if (scrollTop) {
+                const scrollPosition = parseInt(scrollTop);
+                console.log('恢复滚动位置:', scrollPosition);
+                // 延迟设置滚动位置，确保所有内容都已加载
+                setTimeout(function() {
+                    chatContainer.scrollTop = scrollPosition;
+                }, 200);
+            } else {
+                // 如果没有保存的位置，默认滚动到底部
+                console.log('没有保存的滚动位置，滚动到底部');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+    } else {
+        console.error('未找到聊天容器元素');
+    }
+}
+
+// 切换回复的展开/收起状态
+function toggleReplies(postId, totalReplies) {
+    const container = document.getElementById(`replies-container-${postId}`);
+    const toggleBtn = document.getElementById(`toggle-btn-${postId}`);
+    const allReplies = container.querySelectorAll('.reply-item');
+    
+    // 检查当前状态
+    const isExpanded = toggleBtn.textContent.includes('收起');
+    
+    if (isExpanded) {
+        // 收起回复：给除了第一条回复外的所有回复项添加reply-hidden类
+        allReplies.forEach((reply, index) => {
+            if (index > 0) {
+                reply.classList.add('reply-hidden');
+            }
+        });
+        toggleBtn.textContent = `展开更多回复 (${totalReplies - 1})`;
+    } else {
+        // 展开回复：移除所有回复项的reply-hidden类
+        allReplies.forEach(reply => {
+            reply.classList.remove('reply-hidden');
+        });
+        toggleBtn.textContent = `收起`;
+    }
+}
+
+// 定位到指定帖子
+function scrollToPost(postId) {
+    const postElement = document.getElementById(`post-${postId}`);
+    if (postElement) {
+        // 滚动到帖子位置，顶部留出50px间距
+        window.scrollTo({
+            top: postElement.offsetTop - 50,
+            behavior: 'smooth'
+        });
+        // 高亮显示帖子
+        postElement.style.backgroundColor = '#fff3cd';
+        setTimeout(() => {
+            postElement.style.backgroundColor = '';
+        }, 2000);
+    }
+}
+
+// 为所有点赞和回复表单添加提交事件监听器
+document.addEventListener('DOMContentLoaded', function() {
+    // 为所有表单添加提交事件监听器
+    const forms = document.querySelectorAll('form');
+    forms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            // 保存滚动位置
+            saveScrollPosition();
+        });
+    });
+    
+    // 页面加载完成后恢复滚动位置
+    restoreScrollPosition();
+    
+    // 检查URL是否有post_id参数，如果有则定位到该帖子
+    const urlParams = new URLSearchParams(window.location.search);
+    const postId = urlParams.get('post_id');
+    if (postId) {
+        scrollToPost(postId);
+    }
+});
+</script>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        {% if search_query %}
+                            <h4 class="mb-0">
+                                <a href="{{ url_for('main.square') }}" class="text-white text-decoration-none">返回</a>
+                            </h4>
+                        {% else %}
+                            <h4 class="mb-0">交流广场</h4>
+                        {% endif %}
+                        <form method="GET" action="{{ url_for('main.square') }}" class="d-flex">
+                            <select name="search_type" class="form-select form-select-sm me-2" style="width: auto;">
+                                <option value="content" {% if search_type == 'content' %}selected{% endif %}>搜索发言</option>
+                                <option value="user" {% if search_type == 'user' %}selected{% endif %}>搜索用户发言</option>
+                            </select>
+                            <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="搜索消息..." value="{{ search_query }}">
+                            <button type="submit" class="btn btn-sm btn-light">搜索</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- 聊天消息列表 -->
+                <div class="card-body" style="max-height: 600px; overflow-y: auto; display: flex; flex-direction: column;">
+                    {% if posts %}
+                        {% for post in posts %}
+                        <!-- 检查当前用户是否点赞了该帖子 -->
+                        {% set liked = False %}
+                        {% for like in post.likes.all() %}
+                            {% if like.user_id == current_user.id %}
+                                {% set liked = True %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <!-- 自己发布的消息在右侧 -->
+                        {% if post.user.id == current_user.id %}
+                        <div id="post-{{ post.id }}" class="mb-4 d-flex justify-content-end">
+                            <div class="flex-grow-1 max-w-xs ml-3">
+                                <!-- 用户名和时间 -->
+                                <div class="d-flex justify-content-end align-items-center mb-1">
+                                    <small class="text-muted">{{ post.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                    <strong class="ms-2 clickable-username" onclick="showUserInfo({{ post.user.id }})">{{ post.user.username }}</strong>
+                                </div>
+                                
+                                <!-- 留言内容 - 淡黄色背景 -->
+                                <div class="bg-warning bg-opacity-25 p-3 rounded">
+                                    {% if '商品名称：' in post.content and '商品价格：' in post.content and '商品链接：' in post.content %}
+                    {% set content_lines = (post.content | safe | string()).split('\n') %}
+                    {% set pre_content = [] %}
+                    {% set item_title = '' %}
+                    {% set item_price = '' %}
+                    {% set item_link = '' %}
+                    {% set item_seller = '' %}
+                    {% set item_stock = '' %}
+                    {% set item_views = '' %}
+                    {% set item_follows = '' %}
+                    {% set in_pre_content = true %}
+                    {% set found_product_info = false %}
+                    
+                    <!-- 提取商品信息 -->
+                    {% for line in content_lines %}
+                        {% if line.startswith('商品名称：') %}
+                            {% set item_title = line.replace('商品名称：', '') %}
+                            {% set found_product_info = true %}
+                            {% set in_pre_content = false %}
+                        {% elif line.startswith('商品价格：') %}
+                            {% set item_price = line.replace('商品价格：', '') %}
+                        {% elif line.startswith('商品链接：') %}
+                            {% set item_link = line.replace('商品链接：', '') %}
+                        {% elif line.startswith('卖家：') %}
+                            {% set item_seller = line.replace('卖家：', '') %}
+                        {% elif line.startswith('库存：') %}
+                            {% set item_stock = line.replace('库存：', '') %}
+                        {% elif line.startswith('浏览：') %}
+                            {% set item_views = line.replace('浏览：', '') %}
+                        {% elif line.startswith('关注：') %}
+                            {% set item_follows = line.replace('关注：', '') %}
+                        {% elif in_pre_content and line.strip() %}
+                            {% set _ = pre_content.append(line) %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- 前置内容 -->
+                    {% if pre_content | length > 0 %}
+                        <p>{{ pre_content | join('\n') | safe }}</p>
+                    {% endif %}
+                    
+                    <!-- 商品信息 - 只显示文字信息 -->
+                    <div class="ms-2 me-2 p-2 rounded" style="background-color: white;">
+                        <h5 class="card-title">{{ item_title }}</h5>
+                        <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
+                        <p class="card-text text-muted small">库存: {{ item_stock }}</p>
+                        <p class="card-text text-muted small">卖家: {{ item_seller }}</p>
+                        <p class="card-text text-muted small">浏览: {{ item_views }} | 关注: {{ item_follows }}</p>
+                        <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
+                    </div>
+                {% else %}
+                    <!-- 普通内容 -->
+                    <p>{{ post.content | safe }}</p>
+                {% endif %}
+                                    
+                                    <!-- 图片（如果有） -->
+                                    {% if post.image_file %}
+                                    <div class="mt-2">
+                                        <img src="{{ url_for('static', filename='uploads/' + post.image_file) }}" 
+                                             alt="留言图片" 
+                                             class="img-fluid rounded" 
+                                             style="max-width: 300px;">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div class="d-flex justify-content-end mt-1">
+                                <!-- 回复按钮 -->
+                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                        onclick="toggleReplyForm({{ post.id }}, {{ post.id }}, 'post', '{{ post.user.username }}')">
+                                    回复
+                                </button>
+                                
+                                <!-- @按钮 -->
+                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                        onclick="mentionUser('{{ post.user.username }}')">
+                                    @TA
+                                </button>
+                                
+                                <!-- 点赞按钮 -->
+                                <form method="POST" action="{{ url_for('main.like_post', post_id=post.id) }}" 
+                                      style="display: inline;">
+                                    {{ form.hidden_tag() }}
+                                    <button type="submit" class="btn btn-sm btn-like {% if liked %}liked{% endif %}">
+                                        <i class="fa {% if liked %}fa-heart{% else %}fa-heart-o{% endif %}"></i> {{ post.likes.count() }}
+                                    </button>
+                                </form>
+                                
+                                <!-- 删除按钮 -->
+                                <form method="POST" action="{{ url_for('main.delete_post', post_id=post.id) }}" 
+                                      style="display: inline;" id="delete-form-{{ post.id }}">
+                                    {{ form.hidden_tag() }}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="if(confirm('确定要删除此帖子吗？')) { document.getElementById('delete-form-{{ post.id }}').submit(); }">
+                                        删除
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- 回复表单 -->
+                            <div id="reply-form-{{ post.id }}" class="mt-2 d-none">
+                                <form method="POST" action="{{ url_for('main.reply_post', post_id=post.id) }}">
+                                    {{ reply_forms[post.id].hidden_tag() }}
+                                    <!-- 隐藏字段，存储被引用的帖子ID -->
+                                    <input type="hidden" name="quoted_post_id" id="quoted-post-id-{{ post.id }}" value="">
+                                    
+                                    <!-- 引用信息显示区域 -->
+                                    <div id="quote-info-{{ post.id }}" class="mb-2 d-none">
+                                        <div class="bg-light p-2 rounded border border-primary">
+                                            <p class="mb-0 fs-6 text-muted">
+                                                <strong>回复:</strong> 点击发送即可回复
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="input-group">
+                                        {{ reply_forms[post.id].content(class="form-control form-control-sm", placeholder="回复...") }}
+                                        <button type="submit" class="btn btn-sm btn-primary">发送</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- 回复列表 -->
+                            {% if post.replies.count() > 0 %}
+                            <div class="mt-2">
+                                <div id="replies-container-{{ post.id }}">
+                                    {% for reply in post.replies.order_by(Reply.date_posted.asc()) %}
+                                    <div class="reply-item d-flex justify-content-end mb-1 {% if loop.index > 1 and post.replies.count() > 3 %}reply-hidden{% endif %}" 
+                                         id="reply-{{ reply.id }}">
+                                        <div class="bg-light p-2 rounded" style="max-width: 80%;">
+                                            <!-- 引用信息和时间在同一行 -->
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <!-- 引用信息 - 文本形式 -->
+                                                {% if reply.quoted_reply %}
+                                                <strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.user.id }})">{{ reply.user.username }}</strong> 回复 @<strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.quoted_reply.user.id }})">{{ reply.quoted_reply.user.username }}</strong>:
+                                                {% elif reply.quoted_post %}
+                                                <strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.user.id }})">{{ reply.user.username }}</strong> 回复 @<strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.quoted_post.user.id }})">{{ reply.quoted_post.user.username }}</strong>:
+                                                {% else %}
+                                                <strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.user.id }})">{{ reply.user.username }}</strong>:
+                                                {% endif %}
+                                                
+                                                <!-- 回复时间 -->
+                                                <small class="text-muted">{{ reply.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                            </div>
+                                            
+                                            <p class="mb-1 fs-6">{{ reply.content | safe }}</p>
+                                        
+                                        <!-- 回复的操作按钮 -->
+                                        <div class="d-flex justify-content-end mt-1">
+                                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                                        onclick="toggleReplyForm({{ post.id }}, {{ reply.id }}, 'reply', '{{ reply.user.username }}')">
+                                                    回复
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                                        onclick="mentionUser('{{ reply.user.username }}')">
+                                                    @TA
+                                                </button>
+                                                <!-- 回复点赞按钮 -->
+                                                {% set reply_liked = False %}
+                                                {% for like in reply.likes.all() %}
+                                                    {% if like.user_id == current_user.id %}
+                                                        {% set reply_liked = True %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <form method="POST" action="{{ url_for('main.like_reply', reply_id=reply.id) }}" 
+                                                      style="display: inline;">
+                                                    {{ form.hidden_tag() }}
+                                                    <button type="submit" class="btn btn-sm btn-like {% if reply_liked %}liked{% endif %}">
+                                                    <i class="fa {% if reply_liked %}fa-heart{% else %}fa-heart-o{% endif %}"></i> {{ reply.likes.count() }}
+                                                </button>
+                                                </form>
+                                                <!-- 删除按钮 -->
+                                                {% if reply.user_id == current_user.id or current_user.is_admin %}
+                                                <form method="POST" action="{{ url_for('main.delete_reply', reply_id=reply.id) }}" 
+                                                      style="display: inline;" id="delete-reply-form-{{ reply.id }}">
+                                                    {{ form.hidden_tag() }}
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="if(confirm('确定要删除此回复吗？')) { document.getElementById('delete-reply-form-{{ reply.id }}').submit(); }">
+                                                        删除
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <!-- 展开/收起按钮 -->
+                                {% if post.replies.count() > 3 %}
+                                <div class="text-center mt-1">
+                                    <button class="btn btn-sm btn-link text-muted" 
+                                            onclick="toggleReplies({{ post.id }}, {{ post.replies.count() }})" 
+                                            id="toggle-btn-{{ post.id }}">
+                                        展开更多回复 ({{ post.replies.count() - 1 }})
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 用户头像 -->
+                        <img src="{{ url_for('static', filename='uploads/avatars/' + post.user.avatar) }}" 
+                             alt="{{ post.user.username }}" 
+                             class="rounded-circle clickable-avatar" 
+                             style="width: 40px; height: 40px; object-fit: cover;" 
+                             onclick="showUserInfo({{ post.user.id }})">
+                    </div>
+                    {% else %}
+                    <!-- 他人发布的消息在左侧 -->
+                    <div id="post-{{ post.id }}" class="mb-4 d-flex justify-content-start">
+                        <!-- 用户头像 -->
+                        <img src="{{ url_for('static', filename='uploads/avatars/' + post.user.avatar) }}" 
+                             alt="{{ post.user.username }}" 
+                             class="rounded-circle clickable-avatar" 
+                             style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px;" 
+                             onclick="showUserInfo({{ post.user.id }})">
+                        
+                        <div class="flex-grow-1 max-w-xs">
+                            <!-- 用户名和时间 -->
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="clickable-username" onclick="showUserInfo({{ post.user.id }})">{{ post.user.username }}</strong>
+                                <small class="text-muted">{{ post.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                            </div>
+                            
+                            <!-- 留言内容 - 淡灰色背景 -->
+                            <div class="bg-light p-3 rounded">
+                                {% if '商品名称：' in post.content and '商品价格：' in post.content and '商品链接：' in post.content %}
+                    {% set content_lines = (post.content | safe | string()).split('\n') %}
+                    {% set pre_content = [] %}
+                    {% set item_title = '' %}
+                    {% set item_price = '' %}
+                    {% set item_link = '' %}
+                    {% set item_seller = '' %}
+                    {% set item_stock = '' %}
+                    {% set item_views = '' %}
+                    {% set item_follows = '' %}
+                    {% set in_pre_content = true %}
+                    {% set found_product_info = false %}
+                    
+                    <!-- 提取商品信息 -->
+                    {% for line in content_lines %}
+                        {% if line.startswith('商品名称：') %}
+                            {% set item_title = line.replace('商品名称：', '') %}
+                            {% set found_product_info = true %}
+                            {% set in_pre_content = false %}
+                        {% elif line.startswith('商品价格：') %}
+                            {% set item_price = line.replace('商品价格：', '') %}
+                        {% elif line.startswith('商品链接：') %}
+                            {% set item_link = line.replace('商品链接：', '') %}
+                        {% elif line.startswith('卖家：') %}
+                            {% set item_seller = line.replace('卖家：', '') %}
+                        {% elif line.startswith('库存：') %}
+                            {% set item_stock = line.replace('库存：', '') %}
+                        {% elif line.startswith('浏览：') %}
+                            {% set item_views = line.replace('浏览：', '') %}
+                        {% elif line.startswith('关注：') %}
+                            {% set item_follows = line.replace('关注：', '') %}
+                        {% elif in_pre_content and line.strip() %}
+                            {% set _ = pre_content.append(line) %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- 前置内容 -->
+                    {% if pre_content | length > 0 %}
+                        <p>{{ pre_content | join('\n') | safe }}</p>
+                    {% endif %}
+                    
+                    <!-- 商品信息 - 只显示文字信息 -->
+                    <div class="ms-2 me-2 p-2 rounded" style="background-color: white;">
+                        <h5 class="card-title">{{ item_title }}</h5>
+                        <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
+                        <p class="card-text text-muted small">库存: {{ item_stock }}</p>
+                        <p class="card-text text-muted small">卖家: {{ item_seller }}</p>
+                        <p class="card-text text-muted small">浏览: {{ item_views }} | 关注: {{ item_follows }}</p>
+                        <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
+                    </div>
+                {% else %}
+                    <!-- 普通内容 -->
+                    <p>{{ post.content | safe }}</p>
+                {% endif %}
+                                
+                                <!-- 图片（如果有） -->
+                                {% if post.image_file %}
+                                <div class="mt-2">
+                                    <img src="{{ url_for('static', filename='uploads/' + post.image_file) }}" 
+                                         alt="留言图片" 
+                                         class="img-fluid rounded" 
+                                         style="max-width: 300px;">
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div class="d-flex justify-content-start mt-1">
+                                <!-- 回复按钮 -->
+                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                        onclick="toggleReplyForm({{ post.id }}, {{ post.id }}, 'post', '{{ post.user.username }}')">
+                                    回复
+                                </button>
+                                
+                                <!-- @按钮 -->
+                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                        onclick="mentionUser('{{ post.user.username }}')">
+                                    @TA
+                                </button>
+                                
+                                <!-- 点赞按钮 -->
+                                <form method="POST" action="{{ url_for('main.like_post', post_id=post.id) }}" 
+                                      style="display: inline;">
+                                    {{ form.hidden_tag() }}  
+                                    <button type="submit" class="btn btn-sm btn-like {% if liked %}liked{% endif %}"> 
+                                        <i class="fa {% if liked %}fa-heart{% else %}fa-heart-o{% endif %}"></i> {{ post.likes.count() }}
+                                    </button>
+                                </form>
+                                
+                                <!-- 删除按钮 -->
+                                {% if current_user.is_admin %}
+                                <form method="POST" action="{{ url_for('main.delete_post', post_id=post.id) }}" 
+                                      style="display: inline;" id="delete-form-{{ post.id }}">
+                                    {{ form.hidden_tag() }}
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                            onclick="if(confirm('确定要删除此帖子吗？')) { document.getElementById('delete-form-{{ post.id }}').submit(); }">
+                                        删除
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- 回复表单 -->
+                            <div id="reply-form-{{ post.id }}" class="mt-2 d-none">
+                                <form method="POST" action="{{ url_for('main.reply_post', post_id=post.id) }}">
+                                    {{ reply_forms[post.id].hidden_tag() }}
+                                    <!-- 隐藏字段，存储被引用的帖子ID -->
+                                    <input type="hidden" name="quoted_post_id" id="quoted-post-id-{{ post.id }}" value="">
+                                    
+                                    <!-- 引用信息显示区域 -->
+                                    <div id="quote-info-{{ post.id }}" class="mb-2 d-none">
+                                        <div class="bg-light p-2 rounded border border-primary">
+                                            <p class="mb-0 fs-6 text-muted">
+                                                <strong>回复:</strong> 点击发送即可回复
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="input-group">
+                                        {{ reply_forms[post.id].content(class="form-control form-control-sm", placeholder="回复...") }}
+                                        <button type="submit" class="btn btn-sm btn-primary">发送</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- 回复列表 -->
+                            {% if post.replies.count() > 0 %}
+                            <div class="mt-2">
+                                <div id="replies-container-{{ post.id }}">
+                                    {% for reply in post.replies.order_by(Reply.date_posted.asc()) %}
+                                    <div class="reply-item d-flex justify-content-start mb-1 {% if loop.index > 1 and post.replies.count() > 3 %}reply-hidden{% endif %}" 
+                                         id="reply-{{ reply.id }}">
+                                        <div class="bg-light p-2 rounded" style="max-width: 80%;">
+                                            <!-- 引用信息和时间在同一行 -->
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <!-- 引用信息 - 文本形式 -->
+                                                {% if reply.quoted_reply %}
+                                                <strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.user.id }})">{{ reply.user.username }}</strong> 回复 @<strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.quoted_reply.user.id }})">{{ reply.quoted_reply.user.username }}</strong>:
+                                                {% elif reply.quoted_post %}
+                                                <strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.user.id }})">{{ reply.user.username }}</strong> 回复 @<strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.quoted_post.user.id }})">{{ reply.quoted_post.user.username }}</strong>:
+                                                {% else %}
+                                                <strong class="fs-7 text-muted clickable-username" onclick="showUserInfo({{ reply.user.id }})">{{ reply.user.username }}</strong>:
+                                                {% endif %}
+                                                
+                                                <!-- 回复时间 -->
+                                                <small class="text-muted">{{ reply.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                            </div>
+                                            
+                                            <p class="mb-1 fs-6">{{ reply.content | safe }}</p>
+                                            
+                                            <!-- 回复的操作按钮 -->
+                                            <div class="d-flex justify-content-start mt-1">
+                                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                                        onclick="toggleReplyForm({{ post.id }}, {{ reply.id }}, 'reply', '{{ reply.user.username }}')">
+                                                    回复
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary me-1" 
+                                                        onclick="mentionUser('{{ reply.user.username }}')">
+                                                    @TA
+                                                </button>
+                                                <!-- 回复点赞按钮 -->
+                                                {% set reply_liked = False %}
+                                                {% for like in reply.likes.all() %}
+                                                    {% if like.user_id == current_user.id %}
+                                                        {% set reply_liked = True %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <form method="POST" action="{{ url_for('main.like_reply', reply_id=reply.id) }}" 
+                                                      style="display: inline;">
+                                                    {{ form.hidden_tag() }}
+                                                    <button type="submit" class="btn btn-sm btn-like {% if reply_liked %}liked{% endif %}">
+                                                    <i class="fa {% if reply_liked %}fa-heart{% else %}fa-heart-o{% endif %}"></i> {{ reply.likes.count() }}
+                                                </button>
+                                                </form>
+                                                <!-- 删除按钮 -->
+                                                {% if reply.user_id == current_user.id %}
+                                                <form method="POST" action="{{ url_for('main.delete_reply', reply_id=reply.id) }}" 
+                                                      style="display: inline;" id="delete-reply-form-{{ reply.id }}">
+                                                    {{ form.hidden_tag() }}
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="if(confirm('确定要删除此回复吗？')) { document.getElementById('delete-reply-form-{{ reply.id }}').submit(); }">
+                                                        删除
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <!-- 展开/收起按钮 -->
+                                {% if post.replies.count() > 3 %}
+                                <div class="text-center mt-1">
+                                    <button class="btn btn-sm btn-link text-muted" 
+                                            onclick="toggleReplies({{ post.id }}, {{ post.replies.count() }})" 
+                                            id="toggle-btn-{{ post.id }}">
+                                        展开更多回复 ({{ post.replies.count() - 1 }})
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">没有相关发言！</p>
+                    </div>
+                {% endif %}
+                </div>
+                
+                <!-- 消息输入区域 -->
+                <div class="card-footer">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- 留言内容 -->
+                        <div class="mb-3">
+                            {% if form.content.errors %}
+                                {{ form.content(class="form-control is-invalid", rows=3, placeholder="请输入留言内容...") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.content.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.content(class="form-control", rows=3, placeholder="请输入留言内容...") }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 图片上传和发布按钮 -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1 me-2">
+                                <div class="input-group">
+                                    <label class="input-group-text" for="{{ form.picture.id }}">上传图片</label>
+                                    {{ form.picture(class="form-control") }}
+                                </div>
+                                {% if form.picture.errors %}
+                                    {% for error in form.picture.errors %}
+                                        <small class="text-danger d-block mt-1">{{ error }}</small>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

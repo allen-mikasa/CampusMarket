@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}编辑资料 - 宝黄天{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>编辑个人资料</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        <div class="text-center mb-4">
+                            <img src="{{ url_for('static', filename='uploads/avatars/' + current_user.avatar) }}" alt="用户头像" 
+                                 class="img-fluid rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                        </div>
+                        <div class="mb-4">
+                            {{ form.avatar.label(class="form-label") }}
+                            {{ form.avatar(class="form-control") }}
+                            {% if form.avatar.errors %}
+                                {% for error in form.avatar.errors %}
+                                    <span class="text-danger">{{ error }}</span></br>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="text-muted mt-1">不修改头像请保持为空</p>
+                        </div>
+                        <div class="mb-4">
+                            {{ form.username.label(class="form-label") }}
+                            {% if form.username.errors %}
+                                {{ form.username(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.username.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.username(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        <div class="mb-4">
+                            {{ form.email.label(class="form-label") }}
+                            {% if form.email.errors %}
+                                {{ form.email(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.email(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        <div class="mb-4">
+                            {{ form.contact.label(class="form-label") }}
+                            {% if form.contact.errors %}
+                                {{ form.contact(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.contact.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.contact(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 密码修改区域 -->
+                        <hr class="my-4">
+                        <h5 class="mb-4">修改密码</h5>
+                        <div class="mb-4">
+                            {{ form.current_password.label(class="form-label") }}
+                            {% if form.current_password.errors %}
+                                {{ form.current_password(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.current_password.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.current_password(class="form-control") }}
+                            {% endif %}
+                            <p class="text-muted mt-1">不修改密码请保持所有密码字段为空</p>
+                        </div>
+                        <div class="mb-4">
+                            {{ form.new_password.label(class="form-label") }}
+                            {% if form.new_password.errors %}
+                                {{ form.new_password(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.new_password.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.new_password(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        <div class="mb-4">
+                            {{ form.confirm_new_password.label(class="form-label") }}
+                            {% if form.confirm_new_password.errors %}
+                                {{ form.confirm_new_password(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.confirm_new_password.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.confirm_new_password(class="form-control") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            {{ form.submit(class="btn btn-primary btn-lg") }}
+                            <button type="button" onclick="window.history.back()" class="btn btn-secondary btn-lg ms-2">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

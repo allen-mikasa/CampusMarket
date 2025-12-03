@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-3">
+    <button onclick="window.history.back()" class="btn btn-outline-secondary btn-sm">
+        <i class="fa fa-arrow-left"></i> 返回
+    </button>
+</div>
+<div class="card mb-3">
+    <div class="row g-0">
+        <div class="col-md-5">
+            {% if request.image_file != 'default.jpg' %}
+            <img src="{{ url_for('static', filename='uploads/' + request.image_file) }}" class="img-fluid rounded-start" alt="求购图片">
+            {% else %}
+            <div class="bg-warning text-dark d-flex align-items-center justify-content-center h-100" style="min-height: 300px;">
+                <i class="fa fa-shopping-bag fa-5x"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-7">
+            <div class="card-body">
+                <h2 class="card-title">{{ request.title }}</h2>
+                <h3 class="text-danger mb-3">期望价格: ¥ {{ request.price }}</h3>
+                <p class="card-text">{{ request.description }}</p>
+                <hr>
+                <h5>求购者信息</h5>
+                <p><strong>用户:</strong> 
+                    <img src="{{ url_for('static', filename='uploads/avatars/' + request.user.avatar) }}" 
+                         alt="{{ request.user.username }}" 
+                         class="rounded-circle clickable-avatar" 
+                         style="width: 30px; height: 30px; object-fit: cover; margin-right: 5px; vertical-align: middle;" 
+                         onclick="showUserInfo({{ request.user.id }})">
+                    <strong class="clickable-username" onclick="showUserInfo({{ request.user.id }})">{{ request.user.username }}</strong>
+                </p>
+                <p><strong>Email:</strong> {{ request.user.email }}</p>
+                <p><strong>联系方式:</strong> <span class="badge bg-success">{{ request.user.contact }}</span></p>
+                <p class="text-muted"><small>发布于 {{ request.date_posted.strftime('%Y-%m-%d') }}</small></p>
+                
+                {% if request.user == current_user or current_user.is_admin %}
+                <div class="d-flex gap-2">
+                    {% if request.user == current_user %}
+                    <a href="{{ url_for('main.update_request', request_id=request.id) }}" class="btn btn-primary">编辑求购</a>
+                    {% endif %}
+                    <form action="{{ url_for('main.delete_request', request_id=request.id) }}" method="POST">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('确定要删除此求购信息吗？')">删除求购</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

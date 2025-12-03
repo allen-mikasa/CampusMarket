@@ -1,0 +1,573 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- 返回按钮 -->
+    <div class="mb-3">
+        <button type="button" class="btn btn-primary" onclick="window.history.back()">
+            <i class="fa fa-arrow-left"></i> 返回
+        </button>
+    </div>
+    
+    <!-- 个人信息卡片 -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4>{{ user.username }}的个人信息</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 text-center">
+                    <img src="{{ url_for('static', filename='uploads/avatars/' + user.avatar) }}" alt="用户头像" 
+                         class="img-fluid rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                </div>
+                <div class="col-md-9">
+                    <h5 class="card-title">{{ user.username }}</h5>
+                    <p class="card-text"><strong>邮箱：</strong>{{ user.email }}</p>
+                    <p class="card-text"><strong>联系方式：</strong>{{ user.contact }}</p>
+                    <p class="card-text"><strong>关注：</strong>{{ user.followers.count() }}位用户关注</p>
+                    <div class="text-right">
+                    {% if user.id == current_user.id %}
+                    <a href="{{ url_for('main.edit_profile') }}" class="btn btn-primary">编辑资料</a>
+                    {% else %}
+                    <div class="btn-group">
+                        <a href="{{ url_for('main.messages', user_id=user.id) }}" class="btn btn-primary">
+                            <i class="fa fa-envelope"></i> 私信
+                        </a>
+                        {% if current_user.is_authenticated %}
+                            {% set is_following = false %}
+                            {% set follow = current_user.following.filter_by(followed_id=user.id).first() %}
+                            {% if follow %}
+                                {% set is_following = true %}
+                            {% endif %}
+                            {% if is_following %}
+                            <form action="{{ url_for('main.unfollow_user', user_id=user.id) }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-primary">已关注</button>
+                            </form>
+                            {% else %}
+                            <form action="{{ url_for('main.follow_user', user_id=user.id) }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-primary">关注</button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 顶部导航栏 - 抖音风格 -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-body p-0">
+            <ul class="nav nav-tabs nav-fill" id="profileTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" id="items-tab" data-bs-toggle="tab" data-bs-target="#my-items" type="button" role="tab" aria-controls="my-items" aria-selected="true">{% if user.id == current_user.id %}我的{% else %}Ta的{% endif %}发布</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="followed-tab" data-bs-toggle="tab" data-bs-target="#followed-items" type="button" role="tab" aria-controls="followed-items" aria-selected="false">关注商品</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="following-users-tab" data-bs-toggle="tab" data-bs-target="#following-users" type="button" role="tab" aria-controls="following-users" aria-selected="false">关注用户</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#my-requests" type="button" role="tab" aria-controls="my-requests" aria-selected="false">{% if user.id == current_user.id %}我的{% else %}Ta的{% endif %}求购</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="posts-tab" data-bs-toggle="tab" data-bs-target="#my-posts" type="button" role="tab" aria-controls="my-posts" aria-selected="false">{% if user.id == current_user.id %}我的{% else %}Ta的{% endif %}发言</a>
+                </li>
+                {% if user.id == current_user.id %}
+                <li class="nav-item">
+                    <a class="nav-link" id="stocks-tab" data-bs-toggle="tab" data-bs-target="#my-stocks" type="button" role="tab" aria-controls="my-stocks" aria-selected="false">{% if user.id == current_user.id %}我的{% else %}Ta的{% endif %}库存</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    
+    <!-- 内容区域容器 -->
+    <div class="tab-content" id="profileTabContent">
+    
+    <!-- 发布的商品区域 -->
+    <div id="my-items" class="tab-pane fade show active" role="tabpanel" aria-labelledby="items-tab">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4>{{ user.username }}发布的商品</h4>
+                    {% if user.id == current_user.id %}
+                    <a href="{{ url_for('main.new_item') }}" class="btn btn-light btn-sm">发布新商品</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if items %}
+                    <div class="row row-cols-1 row-cols-md-2">
+                        {% for item in items %}
+                            <div class="col mb-4">
+                                <div class="card h-100">
+                                    <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" 
+                                         class="card-img-top" alt="{{ item.title }}" 
+                                         style="height: 200px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ item.title }}</h5>
+                                        <p class="card-text text-danger font-weight-bold">￥{{ item.price }}</p>
+                                        <p class="card-text text-muted">库存: {{ item.stock }}</p>
+                                        <p class="card-text text-muted">{{ item.date_posted.strftime('%Y-%m-%d') }}</p>
+                                        <p class="card-text text-muted small">浏览: {{ item.views }} | 关注: {{ item.followers|length }}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <a href="{{ url_for('main.item_detail', item_id=item.id) }}" 
+                                               class="btn btn-outline-primary btn-sm">查看详情</a>
+                                            {% if user.id == current_user.id %}
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('main.update_item', item_id=item.id) }}" 
+                                                   class="btn btn-outline-success btn-sm">编辑</a>
+                                                <form action="{{ url_for('main.delete_item', item_id=item.id) }}" method="POST" id="delete-item-form-{{ item.id }}">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                            onclick="if(confirm('确定要删除此商品吗？')) { document.getElementById('delete-item-form-{{ item.id }}').submit(); }">删除</button>
+                                                </form>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">{{ user.username }}还没有发布过商品</p>
+                        {% if user.id == current_user.id %}
+                        <a href="{{ url_for('main.new_item') }}" class="btn btn-primary">去发布商品</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 关注的商品区域 -->
+    <div id="followed-items" class="tab-pane fade" role="tabpanel" aria-labelledby="followed-tab">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4>{{ user.username }}关注的商品</h4>
+            </div>
+            <div class="card-body">
+                {% if followed_items %}
+                    <div class="row row-cols-1 row-cols-md-2">
+                        {% for item in followed_items %}
+                            <div class="col mb-4">
+                                <div class="card h-100">
+                                    <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" 
+                                         class="card-img-top" alt="{{ item.title }}" 
+                                         style="height: 200px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ item.title }}</h5>
+                                        <p class="card-text text-danger font-weight-bold">￥{{ item.price }}</p>
+                                        <p class="card-text text-muted">库存: {{ item.stock }}</p>
+                                        <p class="card-text text-muted">
+                                            {% set follow_date = '' %}
+                                            {% for follow in item.follows %}
+                                                {% if follow.user_id == user.id %}
+                                                    {% set follow_date = follow.date_followed.strftime('%Y-%m-%d') %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            关注于 {{ follow_date }}
+                                        </p>
+                                        <p class="card-text text-muted small">浏览: {{ item.views }} | 关注: {{ item.followers|length }}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <a href="{{ url_for('main.item_detail', item_id=item.id) }}" 
+                                               class="btn btn-outline-primary btn-sm">查看详情</a>
+                                            {% if user.id == current_user.id %}
+                                            <form action="{{ url_for('main.unfollow_item', item_id=item.id) }}" method="POST">
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm" 
+                                                        onclick="return confirm('确定要取消关注此商品吗？')">取消关注</button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">{{ user.username }}还没有关注任何商品</p>
+                        {% if user.id == current_user.id %}
+                        <a href="{{ url_for('main.home') }}" class="btn btn-primary">去浏览商品</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 发布的求购区域 -->
+    <div id="my-requests" class="tab-pane fade" role="tabpanel" aria-labelledby="requests-tab">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4>{{ user.username }}发布的求购</h4>
+            </div>
+            <div class="card-body">
+                {% if requests %}
+                    <div class="row row-cols-1 row-cols-md-2">
+                        {% for request in requests %}
+                            <div class="col mb-4">
+                                <div class="card h-100">
+                                    {% if request.image_file != 'default.jpg' %}
+                                    <img src="{{ url_for('static', filename='uploads/' + request.image_file) }}" 
+                                         class="card-img-top" alt="{{ request.title }}" 
+                                         style="height: 200px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-warning text-dark d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fa fa-shopping-bag fa-3x"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ request.title }}</h5>
+                                        <p class="card-text text-danger font-weight-bold">期望价格: ￥{{ request.price }}</p>
+                                        <p class="card-text text-muted">{{ request.date_posted.strftime('%Y-%m-%d') }}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <a href="{{ url_for('main.request_detail', request_id=request.id) }}" 
+                                               class="btn btn-outline-primary btn-sm">查看详情</a>
+                                            {% if user.id == current_user.id %}
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('main.update_request', request_id=request.id) }}" 
+                                                   class="btn btn-outline-success btn-sm">编辑</a>
+                                                <form action="{{ url_for('main.delete_request', request_id=request.id) }}" method="POST" id="delete-request-form-{{ request.id }}">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                            onclick="if(confirm('确定要删除此求购信息吗？')) { document.getElementById('delete-request-form-{{ request.id }}').submit(); }">删除</button>
+                                                </form>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">{{ user.username }}还没有发布过求购信息</p>
+                        {% if user.id == current_user.id %}
+                        <a href="{{ url_for('main.new_request') }}" class="btn btn-primary">去发布求购</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 发布的发言区域 -->
+    <div id="my-posts" class="tab-pane fade" role="tabpanel" aria-labelledby="posts-tab">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4>{{ user.username }}的发言</h4>
+            </div>
+            <div class="card-body">
+                <!-- 发布的帖子 -->
+                <div class="mb-5">
+                    <h5>发布的帖子</h5>
+                    {% if posts %}
+                        <div class="list-group">
+                            {% for post in posts %}
+                                <div class="list-group-item mb-2" style="cursor: pointer; transition: background-color 0.2s;" onclick="window.location.href='{{ url_for('main.square') }}?post_id={{ post.id }}'">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1">{{ post.content | safe }}</p>
+                                            {% if post.image_file %}
+                                                <img src="{{ url_for('static', filename='uploads/' + post.image_file) }}" 
+                                                     alt="帖子图片" 
+                                                     class="img-fluid rounded" 
+                                                     style="max-width: 200px; margin-top: 5px;">
+                                            {% endif %}
+                                            <small class="text-muted d-block mt-1">{{ post.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                        </div>
+                                        {% if user.id == current_user.id %}
+                                        <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="POST" id="delete-post-form-{{ post.id }}" style="margin-left: 10px;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="event.stopPropagation(); if(confirm('确定要删除此帖子吗？')) { document.getElementById('delete-post-form-{{ post.id }}').submit(); }">删除</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">{{ user.username }}还没有发布过帖子</p>
+                    {% endif %}
+                </div>
+                
+                <!-- 发布的回复 -->
+                <div>
+                    <h5>发布的回复</h5>
+                    {% if replies %}
+                        <div class="list-group">
+                            {% for reply in replies %}
+                                <div class="list-group-item mb-2" style="cursor: pointer; transition: background-color 0.2s;" onclick="window.location.href='{{ url_for('main.square') }}?post_id={{ reply.post_id }}'">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1">{{ reply.content | safe }}</p>
+                                            <small class="text-muted d-block mt-1">{{ reply.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                            <small class="text-muted d-block">回复于帖子 #{{ reply.post_id }}</small>
+                                        </div>
+                                        {% if user.id == current_user.id %}
+                                        <form action="{{ url_for('main.delete_reply', reply_id=reply.id) }}" method="POST" id="delete-reply-form-{{ reply.id }}" style="margin-left: 10px;">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="event.stopPropagation(); if(confirm('确定要删除此回复吗？')) { document.getElementById('delete-reply-form-{{ reply.id }}').submit(); }">删除</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">{{ user.username }}还没有发布过回复</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 关注用户区域 -->
+    <div id="following-users" class="tab-pane fade" role="tabpanel" aria-labelledby="following-users-tab">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4>{{ user.username }}关注的用户</h4>
+            </div>
+            <div class="card-body">
+                {% if user.following.count() > 0 %}
+                    <div class="row row-cols-1 row-cols-md-2">
+                        {% for follow in user.following %}
+                            <div class="col mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ url_for('static', filename='uploads/avatars/' + follow.followed.avatar) }}" 
+                                                 alt="{{ follow.followed.username }}" 
+                                                 class="rounded-circle mr-3" 
+                                                 style="width: 60px; height: 60px; object-fit: cover;">
+                                            <div>
+                                                <h5 class="card-title mb-0">{{ follow.followed.username }}</h5>
+                                                <p class="card-text text-muted small">{{ follow.followed.email }}</p>
+                                                <p class="card-text text-muted small">关注于 {{ follow.date_followed.strftime('%Y-%m-%d') }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-end mt-3">
+                                            <a href="{{ url_for('main.user_profile', user_id=follow.followed.id) }}" class="btn btn-outline-primary btn-sm">查看主页</a>
+                                            {% if user.id == current_user.id %}
+                                            <form action="{{ url_for('main.unfollow_user', user_id=follow.followed.id) }}" method="POST" class="ml-2">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">取消关注</button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">{{ user.username }}还没有关注任何用户</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 库存区域 -->
+    {% if user.id == current_user.id %}
+    <div id="my-stocks" class="tab-pane fade" role="tabpanel" aria-labelledby="stocks-tab">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4>{{ user.username }}的库存物品</h4>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addStockModal">添加库存</button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if stocks %}
+                    <div class="row row-cols-1 row-cols-md-2">
+                        {% for stock in stocks %}
+                            <div class="col mb-4">
+                                <div class="card h-100">
+                                    <img src="{{ url_for('static', filename='uploads/' + stock.image_file) }}" 
+                                         class="card-img-top" alt="{{ stock.name }}" 
+                                         style="height: 200px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ stock.name }}</h5>
+                                        <p class="card-text text-primary font-weight-bold">数量: {{ stock.quantity }}</p>
+                                        {% if stock.description %}
+                                        <p class="card-text">{{ stock.description }}</p>
+                                        {% endif %}
+                                        <p class="card-text text-muted">{{ stock.date_added.strftime('%Y-%m-%d') }}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#editStockModal{{ stock.id }}">编辑</button>
+                                            <form action="{{ url_for('main.delete_stock', stock_id=stock.id) }}" method="POST" id="delete-stock-form-{{ stock.id }}">
+                                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                        onclick="if(confirm('确定要删除此库存物品吗？')) { document.getElementById('delete-stock-form-{{ stock.id }}').submit(); }">删除</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">{{ user.username }}还没有添加任何库存物品</p>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStockModal">添加库存</button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    </div>
+    <!-- 添加库存模态框 -->
+    {% if user.id == current_user.id %}
+    <div class="modal fade" id="addStockModal" tabindex="-1" aria-labelledby="addStockModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addStockModalLabel">添加库存物品</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{{ url_for('main.add_stock') }}" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        <div class="mb-3">
+                            <label for="stockName" class="form-label">物品名称</label>
+                            <input type="text" class="form-control" id="stockName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="stockQuantity" class="form-label">数量</label>
+                            <input type="number" class="form-control" id="stockQuantity" name="quantity" required min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="stockDescription" class="form-label">物品描述</label>
+                            <textarea class="form-control" id="stockDescription" name="description" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="stockPicture" class="form-label">物品图片</label>
+                            <input type="file" class="form-control" id="stockPicture" name="picture" accept="image/jpeg,image/png,image/jpg">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary">保存库存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑库存模态框 -->
+    {% for stock in stocks %}
+    <div class="modal fade" id="editStockModal{{ stock.id }}" tabindex="-1" aria-labelledby="editStockModalLabel{{ stock.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editStockModalLabel{{ stock.id }}">编辑库存物品</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{{ url_for('main.update_stock', stock_id=stock.id) }}" enctype="multipart/form-data">
+                        {{ form.csrf_token }}
+                        <div class="mb-3">
+                            <label for="editStockName{{ stock.id }}" class="form-label">物品名称</label>
+                            <input type="text" class="form-control" id="editStockName{{ stock.id }}" name="name" value="{{ stock.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStockQuantity{{ stock.id }}" class="form-label">数量</label>
+                            <input type="number" class="form-control" id="editStockQuantity{{ stock.id }}" name="quantity" value="{{ stock.quantity }}" required min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStockDescription{{ stock.id }}" class="form-label">物品描述</label>
+                            <textarea class="form-control" id="editStockDescription{{ stock.id }}" name="description" rows="3">{{ stock.description }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStockPicture{{ stock.id }}" class="form-label">物品图片</label>
+                            <input type="file" class="form-control" id="editStockPicture{{ stock.id }}" name="picture" accept="image/jpeg,image/png,image/jpg">
+                            <small class="text-muted">当前图片: {{ stock.image_file }}</small>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-primary">更新库存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<style>
+    /* 抖音风格的导航栏样式 */
+    .nav-tabs {
+        border-bottom: 1px solid #e9ecef;
+        background-color: #fff;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-radius: 0;
+        padding: 15px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        margin-bottom: -1px;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        color: #007bff;
+        background-color: #f8f9fa;
+        border-color: transparent;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        background-color: #fff;
+        border-bottom: 2px solid #007bff;
+        font-weight: 600;
+    }
+    
+    /* 内容区域样式优化 */
+    .tab-content {
+        background-color: #fff;
+        border-radius: 0 0 8px 8px;
+    }
+    
+    .tab-pane {
+        padding: 0;
+    }
+    
+    /* 移除卡片顶部的重复阴影 */
+    .tab-pane .card {
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+    
+    /* 优化卡片头部样式 */
+    .tab-pane .card-header {
+        border-radius: 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    /* 移除内容区域的margin */
+    #my-items, #followed-items, #my-requests, #my-posts {
+        margin-top: 0 !important;
+    }
+    
+    /* 保持原有hover效果 */
+    .hover-shadow:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}

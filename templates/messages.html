@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 左侧聊天列表 -->
+        <div class="col-md-4 border-end">
+            <h3 class="mt-3 mb-4">私信</h3>
+            
+            <!-- 搜索框 -->
+            <form method="GET" action="{{ url_for('main.messages') }}" class="mb-4">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="搜索用户" name="search" value="{{ search_query }}">
+                    <button class="btn btn-primary" type="submit">搜索</button>
+                </div>
+            </form>
+            
+            <!-- 搜索结果 -->
+            {% if search_query and users %}
+                <h5 class="mb-3">搜索结果</h5>
+                <div class="list-group mb-4">
+                    {% for user in users %}
+                        <a href="{{ url_for('main.messages', user_id=user.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/avatars/' + user.avatar) }}" alt="{{ user.username }}" class="rounded-circle" width="40" height="40">
+                                <span class="ms-3">{{ user.username }}</span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- 聊天列表 -->
+            <h5 class="mb-3">聊天列表</h5>
+            <div class="list-group">
+                {% for conv in conversation_data %}
+                    <a href="{{ url_for('main.messages', user_id=conv.user.id) }}" class="list-group-item list-group-item-action {% if selected_user and selected_user.id == conv.user.id %}active{% endif %}">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('static', filename='uploads/avatars/' + conv.user.avatar) }}" alt="{{ conv.user.username }}" class="rounded-circle" width="40" height="40">
+                            <div class="ms-3 flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>{{ conv.user.username }}</span>
+                                    {% if conv.unread_count > 0 %}
+                                        <span class="badge bg-danger rounded-pill">
+                                            {{ conv.unread_count }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+                
+                {% if not conversation_data %}
+                    <div class="list-group-item">
+                        <p class="text-center text-muted">暂无聊天记录</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 右侧聊天界面 -->
+        <div class="col-md-8">
+            {% if selected_user %}
+                <!-- 聊天头部 -->
+                <div class="border-bottom p-3">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='uploads/avatars/' + selected_user.avatar) }}" alt="{{ selected_user.username }}" class="rounded-circle" width="50" height="50">
+                        <h5 class="ms-3 mb-0">{{ selected_user.username }}</h5>
+                    </div>
+                </div>
+                
+                <!-- 聊天内容 -->
+                <div class="chat-messages p-4" style="height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                    {% for message in messages %}
+                        <div class="mb-3 {% if message.sender_id == current_user.id %}text-end{% endif %}">
+                            <div class="d-flex {% if message.sender_id == current_user.id %}justify-content-end{% else %}justify-content-start{% endif %}">
+                                {% if message.sender_id != current_user.id %}
+                                    <img src="{{ url_for('static', filename='uploads/avatars/' + message.sender.avatar) }}" alt="{{ message.sender.username }}" class="rounded-circle" width="30" height="30">
+                                {% endif %}
+                                <div style="max-width: 70%;">
+                                    <!-- 处理引用消息 -->
+                                    {% if message.content.startswith('> ') %}
+                                        {% set content_lines = message.content.split('\n') %}
+                                        {% set quote_line = content_lines[0].replace('> ', '') %}
+                                        {% set reply_content = content_lines[2:] | join('\n') %}
+                                        <!-- 引用气泡 -->
+                                        <div class="ms-2 me-2 p-1 rounded mb-1" style="background-color: #e9ecef; font-size: 0.85em; max-width: 100%;">
+                                            <span style="color: #6c757d;">{{ quote_line }}</span>
+                                        </div>
+                                        <!-- 回复内容 -->
+                                        <div class="ms-2 me-2 p-2 rounded" style="{% if message.sender_id == current_user.id %}background-color: #0d6efd; color: white;{% else %}background-color: white;{% endif %}">
+                                            {{ reply_content }}
+                                        </div>
+                                    {% elif message.content.startswith('【商品转发】') %}
+                                        <!-- 处理商品转发消息 -->
+                                        {% set content_lines = message.content.split('\n') %}
+                                        {% set item_title = content_lines[1].replace('商品名称：', '') %}
+                                        {% set item_price = content_lines[2].replace('商品价格：', '') %}
+                                        {% set item_link = content_lines[3].replace('商品链接：', '') %}
+                                        {% set item_seller = '' %}
+                                        {% set item_stock = '' %}
+                                        {% set item_views = '' %}
+                                        {% set item_follows = '' %}
+                                        
+                                        <!-- 提取更多商品信息 -->
+                                        {% for line in content_lines %}
+                                            {% if line.startswith('卖家：') %}
+                                                {% set item_seller = line.replace('卖家：', '') %}
+                                            {% elif line.startswith('库存：') %}
+                                                {% set item_stock = line.replace('库存：', '') %}
+                                            {% elif line.startswith('浏览：') %}
+                                                {% set item_views = line.replace('浏览：', '') %}
+                                            {% elif line.startswith('关注：') %}
+                                                {% set item_follows = line.replace('关注：', '') %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        <!-- 商品信息 - 只显示文字信息 -->
+                                        {% if message.sender_id == current_user.id %}
+                                        <!-- 自己发送的商品信息 - 使用白色背景 -->
+                                        <div class="ms-2 me-2 p-2 rounded" style="background-color: white; color: black;">
+                                            <h5 class="card-title">{{ item_title }}</h5>
+                                            <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
+                                            <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
+                                        </div>
+                                        {% else %}
+                                        <!-- 他人发送的商品信息 - 保持原有样式 -->
+                                        <div class="ms-2 me-2 p-2 rounded" style="background-color: white; color: black;">
+                                            <h5 class="card-title">{{ item_title }}</h5>
+                                            <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
+                                            <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <!-- 普通消息 -->
+                                        <div class="ms-2 me-2 p-2 rounded" style="{% if message.sender_id == current_user.id %}background-color: #0d6efd; color: white;{% else %}background-color: white;{% endif %}">
+                                            {{ message.content }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                {% if message.sender_id == current_user.id %}
+                                    <img src="{{ url_for('static', filename='uploads/avatars/' + message.sender.avatar) }}" alt="{{ message.sender.username }}" class="rounded-circle" width="30" height="30">
+                                {% endif %}
+                            </div>
+                            <small class="text-muted {% if message.sender_id == current_user.id %}d-block text-end{% endif %}">{{ message.date_sent.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- 消息输入框 -->
+                <form method="POST" action="{{ url_for('main.messages', user_id=selected_user.id) }}" class="border-top p-3">
+                    <!-- 添加CSRF令牌 -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="input-group">
+                        <textarea class="form-control" rows="2" placeholder="输入消息..." name="content"></textarea>
+                        <button class="btn btn-primary" type="submit">发送</button>
+                    </div>
+                </form>
+            {% else %}
+                <!-- 未选择聊天对象时的提示 -->
+                <div class="d-flex align-items-center justify-content-center" style="height: 600px;">
+                    <div class="text-center">
+                        <i class="fa fa-comments-o" style="font-size: 48px; color: #ccc;"></i>
+                        <h4 class="mt-3">选择一个聊天对象</h4>
+                        <p class="text-muted">从左侧列表中选择一个用户开始聊天</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 自定义聊天样式 */
+    .chat-messages {
+        scroll-behavior: smooth;
+    }
+    
+    /* 滚动到底部 */
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* 弹出菜单样式 */
+    .message-menu {
+        position: absolute;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        display: none;
+    }
+    
+    .message-menu-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 14px;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .message-menu-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    /* 消息容器相对定位，以便弹出菜单绝对定位 */
+    .message-container {
+        position: relative;
+    }
+</style>
+
+<script>
+    // 页面加载完成后滚动到底部
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatMessages = document.querySelector('.chat-messages');
+        if (chatMessages) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 创建弹出菜单
+        const messageMenu = document.createElement('div');
+        messageMenu.className = 'message-menu';
+        messageMenu.innerHTML = `
+            <button class="message-menu-item" data-action="copy">复制</button>
+            <button class="message-menu-item" data-action="quote">引用</button>
+        `;
+        document.body.appendChild(messageMenu);
+        
+        let selectedMessage = null;
+        
+        // 点击消息显示菜单（只对普通消息和引用消息显示，不对商品转发卡片显示）
+        document.querySelectorAll('.chat-messages .ms-2.me-2.p-2.rounded').forEach(messageDiv => {
+            messageDiv.parentElement.classList.add('message-container');
+            
+            // 检查是否是商品转发卡片的子元素
+            const isProductForward = messageDiv.closest('.border-primary');
+            if (!isProductForward) {
+                messageDiv.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    selectedMessage = this;
+                    
+                    // 显示菜单
+                    messageMenu.style.display = 'block';
+                    messageMenu.style.left = e.pageX + 'px';
+                    messageMenu.style.top = e.pageY + 'px';
+                });
+            }
+        });
+        
+        // 点击菜单选项
+        messageMenu.addEventListener('click', function(e) {
+            if (e.target.classList.contains('message-menu-item')) {
+                const action = e.target.dataset.action;
+                
+                if (selectedMessage) {
+                    const messageContent = selectedMessage.textContent.trim();
+                    
+                    if (action === 'copy') {
+                        // 复制消息内容
+                        navigator.clipboard.writeText(messageContent).then(() => {
+                            // 可以添加复制成功提示
+                        }).catch(err => {
+                            console.error('复制失败:', err);
+                        });
+                    } else if (action === 'quote') {
+                        // 获取被引用消息的发送者名称
+                        let originalSenderName = '';
+                        const messageContainer = selectedMessage.parentElement;
+                        const avatarImg = messageContainer.querySelector('img.rounded-circle');
+                        if (avatarImg) {
+                            originalSenderName = avatarImg.alt;
+                        }
+                        
+                        // 引用消息内容，包含原始发送者名称
+                        const textarea = document.querySelector('textarea[name="content"]');
+                        if (textarea) {
+                            textarea.value = `> ${originalSenderName}: ${messageContent}\n\n` + textarea.value;
+                            textarea.focus();
+                        }
+                    }
+                }
+                
+                // 隐藏菜单
+                messageMenu.style.display = 'none';
+            }
+        });
+        
+        // 点击页面其他地方隐藏菜单
+        document.addEventListener('click', function() {
+            messageMenu.style.display = 'none';
+        });
+        
+        // 防止菜单内部点击关闭菜单
+        messageMenu.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+</script>
+{% endblock %}

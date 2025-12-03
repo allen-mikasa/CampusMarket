@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="dropdown">
+            <h3 class="mb-0 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; display: inline-block;">
+                所有商品
+            </h3>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='latest', search=search_query) }}">最新发布</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='most_followed', search=search_query) }}">最多关注</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='most_viewed', search=search_query) }}">最多浏览</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='price_asc', search=search_query) }}">价格升序</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='price_desc', search=search_query) }}">价格降序</a></li>
+            </ul>
+        </div>
+        <div class="d-flex align-items-center">
+            {% if search_query %}
+            <a href="{{ url_for('main.market') }}" class="btn btn-outline-secondary me-2">返回市场主页</a>
+            {% endif %}
+            <form class="d-flex" role="search" action="{{ url_for('main.market') }}" method="get">
+                <input class="form-control me-2" type="search" placeholder="搜索商品" aria-label="搜索" name="search" value="{{ search_query }}">
+                <button class="btn btn-outline-success" type="submit">搜索</button>
+            </form>
+        </div>
+    </div>
+    {% if items %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for item in items %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                {% if item.image_file != 'default.jpg' %}
+                <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                {% else %}
+                <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">暂无图片</div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-danger fw-bold">¥ {{ item.price }}</h6>
+                    <p class="card-text text-muted small">库存: {{ item.stock }}</p>
+                    <p class="card-text text-muted small">卖家: {{ item.seller.username }}</p>
+                    <p class="card-text text-muted small">浏览: {{ item.views }} | 关注: {{ item.followers|length }}</p>
+                    <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-outline-primary w-100">查看详情</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center" role="alert">
+        没有相关商品信息！
+    </div>
+    {% endif %}
+{% endblock %}
