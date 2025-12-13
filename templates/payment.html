@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>微信支付</h4>
+                </div>
+                <div class="card-body">
+                    <!-- 订单信息 -->
+                    <div class="mb-4">
+                        <h5>订单信息</h5>
+                        <hr>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>商品名称</span>
+                            <span class="font-weight-bold">{{ item.title }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>购买数量</span>
+                            <span>{{ quantity }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>单价</span>
+                            <span>¥ {{ item.price }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between font-weight-bold text-danger mt-3">
+                            <span>订单金额</span>
+                            <span>¥ {{ total_price }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 支付二维码 -->
+                    <div class="text-center mb-4">
+                        <h5>请使用微信扫码支付</h5>
+                        <div class="border p-3 d-inline-block mt-3">
+                            <!-- 模拟支付二维码，实际项目中应该是动态生成的 -->
+                            <div style="width: 200px; height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 180px; height: 180px; background-color: white; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: #6c757d;">支付二维码</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-muted mt-3">请在5分钟内完成支付</p>
+                    </div>
+
+                    <!-- 支付状态 -->
+                    <div class="mb-4">
+                        <h5>支付状态</h5>
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">加载中...</span>
+                            </div>
+                            <p class="mt-2" id="paymentStatus">等待支付...</p>
+                        </div>
+                    </div>
+
+                    <!-- 支付提示 -->
+                    <div class="alert alert-info" role="alert">
+                        <ul class="mb-0">
+                            <li>请确保微信账户余额充足</li>
+                            <li>支付成功后将自动跳转</li>
+                            <li>如遇问题，请联系客服</li>
+                        </ul>
+                    </div>
+
+                    <!-- 取消支付按钮 -->
+                    <div class="text-center">
+                        <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-secondary">取消支付</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 模拟支付成功过程
+    setTimeout(() => {
+        document.getElementById('paymentStatus').innerHTML = '<span class="text-success">支付成功！</span>';
+        // 显示成功提示
+        showAlert('支付成功！正在跳转...');
+        // 2秒后跳转
+        setTimeout(() => {
+            window.location.href = "{{ url_for('main.payment_success', item_id=item.id, quantity=quantity) }}";
+        }, 2000);
+    }, 3000);
+
+    // 显示Alert通知
+    function showAlert(message, duration = 3000) {
+        // 检查是否已有alert元素
+        let alertElement = document.querySelector('.alert');
+        if (!alertElement) {
+            // 创建alert元素
+            alertElement = document.createElement('div');
+            alertElement.className = 'alert alert-success';
+            alertElement.style.position = 'fixed';
+            alertElement.style.top = '20px';
+            alertElement.style.right = '20px';
+            alertElement.style.zIndex = '1030';
+            alertElement.style.minWidth = '300px';
+            alertElement.style.opacity = '1';
+            alertElement.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            alertElement.style.transform = 'translateX(0)';
+            alertElement.style.textAlign = 'center';
+            document.body.appendChild(alertElement);
+        }
+        
+        // 设置Alert内容
+        alertElement.textContent = message;
+        
+        // 显示Alert
+        alertElement.style.display = 'block';
+        
+        // 移除可能存在的fade-out类，确保Alert完全可见
+        alertElement.classList.remove('fade-out');
+        
+        // 3秒后开始淡出
+        setTimeout(() => {
+            alertElement.classList.add('fade-out');
+            // 淡出动画结束后隐藏元素
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+                alertElement.classList.remove('fade-out');
+            }, 500);
+        }, duration);
+    }
+</script>
+{% endblock %}

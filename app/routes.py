@@ -45,6 +45,14 @@ def market():
         query = query.order_by(Item.price.asc())
     elif sort_by == 'price_desc':
         query = query.order_by(Item.price.desc())
+    elif sort_by == 'hottest':
+        # 按热度排序：浏览量*1 + 关注量*3 + 已售数量*5
+        query = query.outerjoin(Follow).group_by(Item.id).order_by(
+            (Item.views + db.func.count(Follow.id) * 3 + Item.sales_count * 5).desc()
+        )
+    elif sort_by == 'best_selling':
+        # 按销量排序
+        query = query.order_by(Item.sales_count.desc())
     else:
         query = query.order_by(Item.date_posted.desc())
     
@@ -145,6 +153,11 @@ def add_stock_item():
         flash('您没有权限操作此库存物品！', 'danger')
         return redirect(url_for('main.new_item'))
     
+    # 检查上货数量是否为正数
+    if stock_quantity <= 0:
+        flash('上货数量必须大于0！', 'danger')
+        return redirect(url_for('main.new_item'))
+    
     # 检查上货数量是否超过库存数量
     if stock_quantity > stock_item.quantity:
         flash('上货数量不能超过库存数量！', 'danger')
@@ -168,9 +181,9 @@ def add_stock_item():
         # 删除库存物品的图片（如果不是默认图片）
         if stock_item.image_file != 'default.jpg':
             from flask import current_app
+            import os
             picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], stock_item.image_file)
             if os.path.exists(picture_path):
-                import os
                 os.remove(picture_path)
         db.session.delete(stock_item)
     
@@ -209,7 +222,6 @@ def follow_item(item_id):
     # 检查是否是自己的商品
     if item.user_id == current_user.id:
         flash('您不能关注自己的商品！', 'danger')
-        return redirect(url_for('main.item_detail', item_id=item.id))
     
     # 检查是否已经关注
     follow = Follow.query.filter_by(user_id=current_user.id, item_id=item.id).first()
@@ -234,7 +246,8 @@ def follow_item(item_id):
             db.session.rollback()
             flash('关注商品失败，请稍后重试！', 'danger')
             print(f"关注商品错误: {e}")
-    return redirect(url_for('main.item_detail', item_id=item.id))
+    # 不重定向，直接返回响应，让AJAX处理
+    return "OK"
 
 
 @main.route("/item/<int:item_id>/unfollow", methods=['POST'])
@@ -246,7 +259,8 @@ def unfollow_item(item_id):
         db.session.delete(follow)
         db.session.commit()
         flash('已取消关注该商品', 'success')
-    return redirect(url_for('main.item_detail', item_id=item.id))
+    # 不重定向，直接返回响应，让AJAX处理
+    return "OK"
 
 
 @main.route("/profile")
@@ -286,9 +300,9 @@ def edit_profile():
             # 删除旧头像（如果不是默认头像）
             if current_user.avatar != 'default_avatar.png':
                 from flask import current_app
+                import os
                 old_avatar_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars', current_user.avatar)
                 if os.path.exists(old_avatar_path):
-                    import os
                     os.remove(old_avatar_path)
             current_user.avatar = avatar_file
         
@@ -328,8 +342,8 @@ def edit_profile():
 def update_item(item_id):
     item = Item.query.get_or_404(item_id)
     if item.user_id != current_user.id:
-        flash('您没有权限修改此商品！', 'danger')
-        return redirect(url_for('main.profile'))
+        abort(403)
+    
     
     form = ItemForm()
     if form.validate_on_submit():
@@ -345,9 +359,9 @@ def update_item(item_id):
             # 删除旧图片（如果不是默认图片）
             if item.image_file != 'default.jpg':
                 from flask import current_app
+                import os
                 old_picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], item.image_file)
                 if os.path.exists(old_picture_path):
-                    import os
                     os.remove(old_picture_path)
             item.image_file = picture_file
         
@@ -416,8 +430,8 @@ def request_detail(request_id):
 def update_request(request_id):
     req = Request.query.get_or_404(request_id)
     if req.user_id != current_user.id:
-        flash('您没有权限修改此求购信息！', 'danger')
-        return redirect(url_for('main.requests'))
+        abort(403)
+    
     
     form = RequestForm()
     if form.validate_on_submit():
@@ -432,9 +446,9 @@ def update_request(request_id):
             # 删除旧图片（如果不是默认图片）
             if req.image_file != 'default.jpg':
                 from flask import current_app
+                import os
                 old_pic_path = os.path.join(current_app.config['UPLOAD_FOLDER'], req.image_file)
                 if os.path.exists(old_pic_path):
-                    import os
                     os.remove(old_pic_path)
             req.image_file = pic_file
         
@@ -461,9 +475,9 @@ def delete_request(request_id):
     # 删除求购信息对应的图片（如果不是默认图片）
     if req.image_file != 'default.jpg':
         from flask import current_app
+        import os
         pic_path = os.path.join(current_app.config['UPLOAD_FOLDER'], req.image_file)
         if os.path.exists(pic_path):
-            import os
             os.remove(pic_path)
     
     db.session.delete(req)
@@ -539,7 +553,7 @@ def square():
     else:
         query = Post.query
     
-    # 按时间升序排列
+    # 按时间升序排列，使新消息显示在底部
     query = query.order_by(Post.date_posted.asc())
     
     # 应用分页
@@ -707,9 +721,9 @@ def delete_post(post_id):
     # 删除帖子相关的图片（如果有）
     if post.image_file:
         from flask import current_app
+        import os
         image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], post.image_file)
         if os.path.exists(image_path):
-            import os
             os.remove(image_path)
     
     # 删除帖子（级联删除会自动处理相关的点赞和回复）
@@ -747,6 +761,9 @@ def user_info(user_id):
 @login_required
 def user_profile(user_id):
     user = User.query.get_or_404(user_id)
+    # 增加用户主页访问量
+    user.views += 1
+    db.session.commit()
     # 获取该用户发布的所有商品
     user_items = Item.query.filter_by(user_id=user.id).order_by(Item.date_posted.desc()).all()
     # 获取该用户关注的所有商品
@@ -834,9 +851,9 @@ def update_stock(stock_id):
             # 删除旧图片（如果不是默认图片）
             if stock.image_file != 'default.jpg':
                 from flask import current_app
+                import os
                 old_picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], stock.image_file)
                 if os.path.exists(old_picture_path):
-                    import os
                     os.remove(old_picture_path)
             # 保存新图片
             stock.image_file = save_picture(picture, is_avatar=False)
@@ -865,9 +882,9 @@ def delete_stock(stock_id):
     # 删除库存物品的图片（如果不是默认图片）
     if stock.image_file != 'default.jpg':
         from flask import current_app
+        import os
         picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], stock.image_file)
         if os.path.exists(picture_path):
-            import os
             os.remove(picture_path)
     
     # 从数据库中删除库存物品
@@ -937,11 +954,23 @@ def messages():
     
     # 获取聊天记录
     messages_list = []
+    messages_pagination = None
     if selected_user:
-        messages_list = Message.query.filter(
+        # 获取页码
+        page = request.args.get('page', 1, type=int)
+        
+        # 查询与selected_user的聊天记录
+        messages_query = Message.query.filter(
             ((Message.sender_id == current_user.id) & (Message.receiver_id == selected_user.id)) |
             ((Message.sender_id == selected_user.id) & (Message.receiver_id == current_user.id))
-        ).order_by(Message.date_sent.asc()).all()
+        ).order_by(Message.date_sent.desc())
+        
+        # 应用分页，每页显示20条消息
+        messages_pagination = messages_query.paginate(page=page, per_page=20, error_out=False)
+        messages_list = messages_pagination.items
+        
+        # 反转列表，使旧消息在底部
+        messages_list = messages_list[::-1]
         
         # 将未读消息标记为已读
         for msg in messages_list:
@@ -958,7 +987,7 @@ def messages():
             db.session.commit()
             return redirect(url_for('main.messages', user_id=selected_user.id))
     
-    return render_template('messages.html', title='私信', users=users, conversation_data=conversation_data, selected_user=selected_user, messages=messages_list, search_query=search_query)
+    return render_template('messages.html', title='私信', users=users, conversation_data=conversation_data, selected_user=selected_user, messages=messages_list, messages_pagination=messages_pagination, search_query=search_query)
 
 
 # 搜索用户路由
@@ -1004,6 +1033,21 @@ def notifications():
     return render_template('notifications.html', title='通知', notifications=notifications_list, pagination=pagination)
 
 
+# 标记所有通知为已读路由
+@main.route('/notifications/mark-all-read', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    try:
+        # 将当前用户的所有未读通知标记为已读
+        Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+        db.session.commit()
+        flash('所有通知已标记为已读', 'success')
+        return redirect(url_for('main.notifications'))
+    except Exception as e:
+        db.session.rollback()
+        flash('操作失败，请稍后重试', 'danger')
+        return redirect(url_for('main.notifications'))
+
 # 通知重定向路由（点击通知跳转）
 @main.route('/notification/<int:notification_id>/redirect')
 @login_required
@@ -1033,6 +1077,9 @@ def notification_redirect(notification_id):
         # 跳转到被回复或点赞的回复所在的帖子页面
         reply = Reply.query.get_or_404(notification.related_id)
         return redirect(url_for('main.square') + f'#post-{reply.post_id}')
+    elif notification.notification_type == 'buy_item':
+        # 跳转到购买通知详情页面
+        return redirect(url_for('main.notification_order', notification_id=notification.id))
     else:
         # 默认跳转到通知列表
         return redirect(url_for('main.notifications'))
@@ -1062,12 +1109,161 @@ def forward_to_message(item_id):
     return jsonify({'success': True, 'message': '转发成功'})
 
 
+# 转发求购信息到私信路由
+@main.route('/request/<int:request_id>/forward/message', methods=['POST'])
+@login_required
+def forward_request_to_message(request_id):
+    req = Request.query.get_or_404(request_id)
+    data = request.get_json()
+    receiver_id = data.get('receiver_id')
+    
+    if not receiver_id:
+        return jsonify({'success': False, 'message': '请选择转发对象'})
+    
+    receiver = User.query.get_or_404(receiver_id)
+    
+    # 构建转发消息内容
+    message_content = f"【求购转发】\n求购名称：{req.title}\n期望价格：¥{req.price}\n求购链接：{request.host_url}request/{req.id}\n求购者：{req.user.username}\n发布时间：{req.date_posted.strftime('%Y-%m-%d')}\n\n{req.description}"
+    
+    # 创建消息
+    message = Message(sender_id=current_user.id, receiver_id=receiver.id, content=message_content)
+    db.session.add(message)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': '转发成功'})
+
+
+# 直接购买路由
+@main.route("/item/<int:item_id>/buy", methods=['POST'])
+@login_required
+def buy_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    
+    # 检查是否是自己的商品
+    if item.seller == current_user:
+        flash('您不能购买自己的商品！', 'danger')
+        return redirect(url_for('main.item_detail', item_id=item_id))
+    
+    # 获取购买数量
+    quantity = int(request.form.get('quantity', 1))
+    
+    # 检查购买数量是否合法
+    if quantity <= 0 or quantity > item.stock:
+        flash('购买数量不合法！', 'danger')
+        return redirect(url_for('main.item_detail', item_id=item_id))
+    
+    # 计算总价
+    total_price = item.price * quantity
+    
+    # 跳转到支付页面
+    return render_template('payment.html', item=item, quantity=quantity, total_price=total_price)
+
+# 支付成功路由
+@main.route("/payment/success/<int:item_id>/<int:quantity>")
+@login_required
+def payment_success(item_id, quantity):
+    item = Item.query.get_or_404(item_id)
+    
+    # 计算总价
+    total_price = item.price * quantity
+    
+    # 使用数据库事务确保数据一致性
+    try:
+        # 1. 更新商品库存
+        item.stock -= quantity
+        if item.stock < 0:
+            flash('商品库存不足！', 'danger')
+            return redirect(url_for('main.item_detail', item_id=item_id))
+        
+        # 2. 添加商品到买家库存
+        # 检查买家库存中是否已有该商品
+        existing_stock = Stock.query.filter_by(user_id=current_user.id, name=item.title).first()
+        if existing_stock:
+            # 如果已有该商品，增加数量
+            existing_stock.quantity += quantity
+        else:
+            # 如果没有该商品，创建新的库存记录
+            new_stock = Stock(
+                name=item.title,
+                quantity=quantity,
+                description=item.description,
+                image_file=item.image_file,
+                user_id=current_user.id
+            )
+            db.session.add(new_stock)
+        
+        # 3. 更新卖家成交量
+        item.seller.sales_count += 1
+        
+        # 4. 更新商品已售数量
+        item.sales_count += quantity
+        
+        # 5. 发送购买通知给卖家
+        notification = Notification(
+            user_id=item.seller.id,
+            sender_id=current_user.id,
+            notification_type='buy_item',
+            content=f'{current_user.username} 购买了你的商品 "{item.title}"！',
+            related_id=item.id
+        )
+        db.session.add(notification)
+        
+        # 提交事务
+        db.session.commit()
+        flash('购买成功！', 'success')
+    except Exception as e:
+        # 发生异常，回滚事务
+        db.session.rollback()
+        flash('购买失败，请稍后重试！', 'danger')
+        print(f"购买失败错误: {e}")
+        return redirect(url_for('main.item_detail', item_id=item_id))
+    
+    # 渲染支付成功页面
+    return render_template('payment_success.html', item=item, quantity=quantity, total_price=total_price)
+
+# 通知订单详情路由
+@main.route("/notification/order/<int:notification_id>")
+@login_required
+def notification_order(notification_id):
+    # 获取通知
+    notification = Notification.query.get_or_404(notification_id)
+    
+    # 确保通知属于当前用户
+    if notification.user_id != current_user.id:
+        abort(403)
+    
+    # 获取关联的商品
+    item = Item.query.get_or_404(notification.related_id)
+    
+    # 获取购买者信息
+    buyer = User.query.get_or_404(notification.sender_id)
+    
+    # 计算订单金额（假设购买数量为1，实际项目中应该从订单表获取）
+    quantity = 1  # 实际项目中应该从订单表获取
+    total_price = item.price * quantity
+    
+    # 渲染订单详情页面
+    return render_template('notification_order.html', notification=notification, item=item, buyer=buyer, quantity=quantity, total_price=total_price)
+
+
+# 榜单路由
+@main.route("/rankings")
+@login_required
+def rankings():
+    # 商品排行榜 - 按热度排序：浏览量*1+关注量*3+已售数量*5
+    items = Item.query.all()
+    items.sort(key=lambda x: x.views + len(x.followers) * 3 + x.sales_count * 5, reverse=True)
+    
+    # 用户排行榜 - 按热度排序：人气*3+成交量*2+主页浏览量*1
+    users = User.query.all()
+    users.sort(key=lambda x: x.followers.count() * 3 + x.sales_count * 2 + x.views, reverse=True)
+    
+    return render_template('rankings.html', title='排行榜', items=items[:10], users=users[:10])
+
+
 # 上下文处理器
 @main.app_context_processor
 def utility_processors():
-    def format_content(content):
-        return format_content(content)
-    
     def notifications_processor():
         if current_user.is_authenticated:
             # 获取当前用户的未读通知数量
@@ -1075,4 +1271,4 @@ def utility_processors():
             return unread_count
         return 0
     
-    return dict(format_content=format_content, unread_notifications_count=notifications_processor)
+    return dict(unread_notifications_count=notifications_processor)

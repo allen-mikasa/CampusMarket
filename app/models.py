@@ -14,6 +14,8 @@ class User(db.Model, UserMixin):
     contact = db.Column(db.String(60), nullable=False)
     avatar = db.Column(db.String(20), nullable=False, default='default_avatar.png')
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    sales_count = db.Column(db.Integer, nullable=False, default=0)  # 成交量统计
+    views = db.Column(db.Integer, nullable=False, default=0, index=True)  # 主页访问量统计
     items = db.relationship('Item', backref='seller', lazy=True)
 
 class Item(db.Model):
@@ -26,6 +28,7 @@ class Item(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     views = db.Column(db.Integer, nullable=False, default=0, index=True)
     stock = db.Column(db.Integer, nullable=False, default=1)
+    sales_count = db.Column(db.Integer, nullable=False, default=0, index=True)  # 已售数量统计
     followers = db.relationship('Follow', backref='item', lazy=True)
 
 class Follow(db.Model):

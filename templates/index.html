@@ -9,6 +9,8 @@
                 <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='latest', search=search_query) }}">最新发布</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='most_followed', search=search_query) }}">最多关注</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='most_viewed', search=search_query) }}">最多浏览</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='hottest', search=search_query) }}">最高热度</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='best_selling', search=search_query) }}">最高销量</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='price_asc', search=search_query) }}">价格升序</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('main.market', sort_by='price_desc', search=search_query) }}">价格降序</a></li>
@@ -37,7 +39,7 @@
                 <div class="card-body">
                     <h5 class="card-title">{{ item.title }}</h5>
                     <h6 class="card-subtitle mb-2 text-danger fw-bold">¥ {{ item.price }}</h6>
-                    <p class="card-text text-muted small">库存: {{ item.stock }}</p>
+                    <p class="card-text text-muted small">在售数量: {{ item.stock }}</p>
                     <p class="card-text text-muted small">卖家: {{ item.seller.username }}</p>
                     <p class="card-text text-muted small">浏览: {{ item.views }} | 关注: {{ item.followers|length }}</p>
                     <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-outline-primary w-100">查看详情</a>

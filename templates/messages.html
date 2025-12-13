@@ -73,7 +73,7 @@
                 </div>
                 
                 <!-- 聊天内容 -->
-                <div class="chat-messages p-4" style="height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                <div class="chat-messages p-4" style="height: 450px; overflow-y: auto; background-color: #f8f9fa;">
                     {% for message in messages %}
                         <div class="mb-3 {% if message.sender_id == current_user.id %}text-end{% endif %}">
                             <div class="d-flex {% if message.sender_id == current_user.id %}justify-content-end{% else %}justify-content-start{% endif %}">
@@ -119,21 +119,32 @@
                                         {% endfor %}
                                         
                                         <!-- 商品信息 - 只显示文字信息 -->
-                                        {% if message.sender_id == current_user.id %}
-                                        <!-- 自己发送的商品信息 - 使用白色背景 -->
                                         <div class="ms-2 me-2 p-2 rounded" style="background-color: white; color: black;">
                                             <h5 class="card-title">{{ item_title }}</h5>
                                             <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
                                             <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
                                         </div>
-                                        {% else %}
-                                        <!-- 他人发送的商品信息 - 保持原有样式 -->
+                                    {% elif message.content.startswith('【求购转发】') %}
+                                        <!-- 处理求购转发消息 -->
+                                        {% set content_lines = message.content.split('\n') %}
+                                        {% set request_title = content_lines[1].replace('求购名称：', '') %}
+                                        {% set request_price = content_lines[2].replace('期望价格：', '') %}
+                                        {% set request_link = content_lines[3].replace('求购链接：', '') %}
+                                        {% set request_user = '' %}
+                                        
+                                        <!-- 提取更多求购信息 -->
+                                        {% for line in content_lines %}
+                                            {% if line.startswith('求购者：') %}
+                                                {% set request_user = line.replace('求购者：', '') %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        <!-- 求购信息卡片 -->
                                         <div class="ms-2 me-2 p-2 rounded" style="background-color: white; color: black;">
-                                            <h5 class="card-title">{{ item_title }}</h5>
-                                            <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
-                                            <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
+                                            <h5 class="card-title">{{ request_title }}</h5>
+                                            <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ request_price }}</h6>
+                                            <a href="{{ request_link }}" class="btn btn-outline-primary w-100">查看详情</a>
                                         </div>
-                                        {% endif %}
                                     {% else %}
                                         <!-- 普通消息 -->
                                         <div class="ms-2 me-2 p-2 rounded" style="{% if message.sender_id == current_user.id %}background-color: #0d6efd; color: white;{% else %}background-color: white;{% endif %}">
@@ -150,8 +161,37 @@
                     {% endfor %}
                 </div>
                 
+                <!-- 分页控件 -->
+                {% if messages_pagination and messages_pagination.pages > 1 %}
+                <div class="border-top p-2">
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {% if not messages_pagination.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('main.messages', user_id=selected_user.id, page=messages_pagination.prev_num) if messages_pagination.has_prev else '#' }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            {% for page_num in messages_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if messages_pagination.page == page_num %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('main.messages', user_id=selected_user.id, page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if not messages_pagination.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('main.messages', user_id=selected_user.id, page=messages_pagination.next_num) if messages_pagination.has_next else '#' }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                
                 <!-- 消息输入框 -->
-                <form method="POST" action="{{ url_for('main.messages', user_id=selected_user.id) }}" class="border-top p-3">
+                <form method="POST" action="{{ url_for('main.messages', user_id=selected_user.id, page=messages_pagination.page if messages_pagination else 1) }}" class="border-top p-3">
                     <!-- 添加CSRF令牌 -->
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="input-group">

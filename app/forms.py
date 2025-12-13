@@ -20,7 +20,7 @@ class LoginForm(FlaskForm):
 class ItemForm(FlaskForm):
     title = StringField('商品标题', validators=[DataRequired()])
     price = FloatField('价格 (元)', validators=[DataRequired()])
-    stock = IntegerField('库存数量', validators=[DataRequired()])
+    stock = IntegerField('上架数量', validators=[DataRequired()])
     description = TextAreaField('商品描述', validators=[DataRequired()])
     picture = FileField('商品图片', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
     submit = SubmitField('发布商品')
@@ -37,6 +37,11 @@ class ProfileForm(FlaskForm):
     confirm_new_password = PasswordField('确认新密码')
     
     submit = SubmitField('保存修改')
+    
+    def validate_current_password(self, current_password):
+        # 只有当new_password有值时，才验证current_password是否提供
+        if self.new_password.data and not current_password.data:
+            raise ValidationError('修改密码时必须提供当前密码')
     
     def validate_new_password(self, new_password):
         # 只有当current_password或new_password有值时，才验证new_password的长度

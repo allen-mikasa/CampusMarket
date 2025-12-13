@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="mb-3">
+        <button onclick="window.history.back()" class="btn btn-outline-secondary btn-sm">
+            <i class="fa fa-arrow-left"></i> 返回
+        </button>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4>订单详情</h4>
+        </div>
+        <div class="card-body">
+            <!-- 订单基本信息 -->
+            <div class="mb-4">
+                <h5>订单信息</h5>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>购买时间</span>
+                            <span>{{ notification.date_created.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>订单状态</span>
+                            <span class="text-success">已完成</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span>购买者</span>
+                            <span>{{ buyer.username }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 商品信息 -->
+            <div class="mb-4">
+                <h5>商品信息</h5>
+                <hr>
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if item.image_file != 'default.jpg' %}
+                        <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" 
+                             alt="{{ item.title }}" 
+                             class="img-fluid rounded" 
+                             style="max-height: 200px; object-fit: cover;">
+                        {% else %}
+                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px; border-radius: 8px;">
+                            无图片
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>商品名称</span>
+                            <span class="font-weight-bold">{{ item.title }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>单价</span>
+                            <span>¥ {{ item.price }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>购买数量</span>
+                            <span>{{ quantity }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>商品描述</span>
+                            <span>{{ item.description[:100] }}...</span>
+                        </div>
+                        <div class="d-flex justify-content-between font-weight-bold text-danger mt-3">
+                            <span>订单金额</span>
+                            <span>¥ {{ total_price }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{{ url_for('main.item_detail', item_id=item.id) }}" class="btn btn-primary">查看商品</a>
+                <a href="{{ url_for('main.notifications') }}" class="btn btn-secondary">返回通知</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

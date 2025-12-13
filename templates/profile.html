@@ -13,7 +13,10 @@
     <!-- 个人信息卡片 -->
     <div class="card shadow-lg mb-4">
         <div class="card-header bg-primary text-white">
-            <h4>{{ user.username }}的个人信息</h4>
+            <div class="d-flex justify-content-between align-items-center">
+                <h4>{{ user.username }}的个人信息</h4>
+                <span class="badge bg-light text-primary">访问量：{{ user.views }}</span>
+            </div>
         </div>
         <div class="card-body">
             <div class="row">
@@ -25,13 +28,17 @@
                     <h5 class="card-title">{{ user.username }}</h5>
                     <p class="card-text"><strong>邮箱：</strong>{{ user.email }}</p>
                     <p class="card-text"><strong>联系方式：</strong>{{ user.contact }}</p>
-                    <p class="card-text"><strong>关注：</strong>{{ user.followers.count() }}位用户关注</p>
+                    <p class="card-text">
+                        <strong>人气：</strong>{{ user.followers.count() }}位用户关注 &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; 
+                        <strong>在售数量：</strong>{{ items | length }}件商品 &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; 
+                        <strong>成交量：</strong>{{ user.sales_count }}笔交易
+                    </p>
                     <div class="text-right">
                     {% if user.id == current_user.id %}
                     <a href="{{ url_for('main.edit_profile') }}" class="btn btn-primary">编辑资料</a>
                     {% else %}
                     <div class="btn-group">
-                        <a href="{{ url_for('main.messages', user_id=user.id) }}" class="btn btn-primary">
+                        <a href="{{ url_for('main.messages', user_id=user.id) }}" class="btn btn-primary" style="background: linear-gradient(135deg, #ffb74d 0%, #ffa726 100%); border: none; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); transition: all 0.3s ease; padding: 0.5rem 1rem;">
                             <i class="fa fa-envelope"></i> 私信
                         </a>
                         {% if current_user.is_authenticated %}
@@ -40,15 +47,24 @@
                             {% if follow %}
                                 {% set is_following = true %}
                             {% endif %}
+                            {% set is_followed_by = false %}
+                            {% set followed_back = user.following.filter_by(followed_id=current_user.id).first() %}
+                            {% if followed_back %}
+                                {% set is_followed_by = true %}
+                            {% endif %}
                             {% if is_following %}
                             <form action="{{ url_for('main.unfollow_user', user_id=user.id) }}" method="POST" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-primary">已关注</button>
+                                {% if is_followed_by %}
+                                <button type="submit" class="btn btn-outline-primary" style="margin-left: 10px;">互相关注</button>
+                                {% else %}
+                                <button type="submit" class="btn btn-outline-primary" style="margin-left: 10px;">已关注</button>
+                                {% endif %}
                             </form>
                             {% else %}
                             <form action="{{ url_for('main.follow_user', user_id=user.id) }}" method="POST" style="display: inline;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-primary">关注</button>
+                                <button type="submit" class="btn btn-outline-primary" style="margin-left: 10px;">关注</button>
                             </form>
                             {% endif %}
                         {% endif %}
@@ -113,7 +129,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">{{ item.title }}</h5>
                                         <p class="card-text text-danger font-weight-bold">￥{{ item.price }}</p>
-                                        <p class="card-text text-muted">库存: {{ item.stock }}</p>
+                                        <p class="card-text text-muted">在售: {{ item.stock }}</p>
                                         <p class="card-text text-muted">{{ item.date_posted.strftime('%Y-%m-%d') }}</p>
                                         <p class="card-text text-muted small">浏览: {{ item.views }} | 关注: {{ item.followers|length }}</p>
                                         <div class="d-flex justify-content-between">
@@ -165,7 +181,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">{{ item.title }}</h5>
                                         <p class="card-text text-danger font-weight-bold">￥{{ item.price }}</p>
-                                        <p class="card-text text-muted">库存: {{ item.stock }}</p>
+                                        <p class="card-text text-muted">在售: {{ item.stock }}</p>
                                         <p class="card-text text-muted">
                                             {% set follow_date = '' %}
                                             {% for follow in item.follows %}
@@ -275,7 +291,7 @@
                                 <div class="list-group-item mb-2" style="cursor: pointer; transition: background-color 0.2s;" onclick="window.location.href='{{ url_for('main.square') }}?post_id={{ post.id }}'">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <p class="mb-1">{{ post.content | safe }}</p>
+                                            <p class="mb-1">{{ post.content | e }}</p>
                                             {% if post.image_file %}
                                                 <img src="{{ url_for('static', filename='uploads/' + post.image_file) }}" 
                                                      alt="帖子图片" 
@@ -308,7 +324,7 @@
                                 <div class="list-group-item mb-2" style="cursor: pointer; transition: background-color 0.2s;" onclick="window.location.href='{{ url_for('main.square') }}?post_id={{ reply.post_id }}'">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <p class="mb-1">{{ reply.content | safe }}</p>
+                                            <p class="mb-1">{{ reply.content | e }}</p>
                                             <small class="text-muted d-block mt-1">{{ reply.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
                                             <small class="text-muted d-block">回复于帖子 #{{ reply.post_id }}</small>
                                         </div>
@@ -428,7 +444,7 @@
     </div>
     <!-- 添加库存模态框 -->
     {% if user.id == current_user.id %}
-    <div class="modal fade" id="addStockModal" tabindex="-1" aria-labelledby="addStockModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addStockModal" tabindex="-1" aria-labelledby="addStockModalLabel" aria-hidden="true" data-bs-backdrop="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -466,7 +482,7 @@
     
     <!-- 编辑库存模态框 -->
     {% for stock in stocks %}
-    <div class="modal fade" id="editStockModal{{ stock.id }}" tabindex="-1" aria-labelledby="editStockModalLabel{{ stock.id }}" aria-hidden="true">
+    <div class="modal fade" id="editStockModal{{ stock.id }}" tabindex="-1" aria-labelledby="editStockModalLabel{{ stock.id }}" aria-hidden="true" data-bs-backdrop="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">

@@ -7,9 +7,371 @@
 .reply-item.reply-hidden {
     display: none !important;
 }
+
+/* 自定义滚动条样式 */
+.card-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 消息卡片样式优化 */
+#post-\d+ {
+    transition: all 0.3s ease;
+}
+
+/* 自己的消息样式 */
+.d-flex.justify-content-end {
+    .bg-warning.bg-opacity-25 {
+        background-color: #ffe0b2 !important;
+        border: 1px solid #ffcc80;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* 他人的消息样式 */
+.d-flex.justify-content-start {
+    .bg-light {
+        background-color: #ffffff !important;
+        border: 1px solid #ffe0b2;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* 消息内容区域 */
+.bg-warning.bg-opacity-25,
+.bg-light {
+    border-radius: 12px !important;
+    transition: all 0.3s ease;
+}
+
+.bg-warning.bg-opacity-25:hover,
+.bg-light:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 头像样式优化 */
+.clickable-avatar {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-avatar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 用户名样式 */
+.clickable-username {
+    font-weight: 600;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.clickable-username:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+
+/* 按钮样式优化 */
+.btn {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* 点赞按钮优化 */
+.btn-like {
+    background-color: #fff;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.btn-like:hover {
+    background-color: #f8f9fa;
+    color: #dc3545;
+    border-color: #dc3545;
+    transform: translateY(-1px);
+}
+
+.btn-like:active {
+    transform: translateY(0);
+}
+
+.btn-like.liked {
+    background-color: #fff;
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-like.liked:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* 其他按钮优化 */
+.btn-outline-secondary {
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+    border-color: #ffcdd2;
+    color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* 输入区域样式 */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-control-sm {
+    border-radius: 6px;
+}
+
+/* 输入框占位符样式 */
+.form-control::placeholder {
+    color: #adb5bd;
+}
+
+/* 图片上传区域样式 */
+.input-group-text {
+    border-radius: 6px 0 0 6px;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+/* 发布按钮样式 */
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* 搜索表单样式 */
+.form-select.form-select-sm {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+/* 卡片样式优化 */
+.card {
+    border-radius: 16px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* 卡片头部样式 */
+.card-header {
+    border-radius: 16px 16px 0 0 !important;
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
+    border: none !important;
+}
+
+/* 卡片底部样式 */
+.card-footer {
+    border-radius: 0 0 16px 16px !important;
+    background-color: #fafafa !important;
+    border-top: 1px solid #e9ecef !important;
+}
+
+/* 时间显示样式 */
+.text-muted {
+    color: #6c757d !important;
+    font-size: 0.75rem;
+}
+
+/* 图片样式优化 */
+.img-fluid.rounded {
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.img-fluid.rounded:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 回复项样式 */
+.reply-item {
+    transition: all 0.3s ease;
+}
+
+.reply-item:hover {
+    transform: translateX(4px);
+}
+
+/* 展开/收起按钮样式 */
+.btn-link.text-muted {
+    color: #0d6efd !important;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-link.text-muted:hover {
+    text-decoration: underline !important;
+    color: #0a58ca !important;
+}
+
+/* 引用信息样式 */
+.bg-light.p-2.rounded.border.border-primary {
+    background-color: #e3f2fd !important;
+    border-color: #bbdefb !important;
+    border-radius: 8px !important;
+}
+
+/* 用户名和头像的交互效果 */
+.clickable-avatar,
+.clickable-username {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clickable-avatar:hover,
+.clickable-username:hover {
+    opacity: 0.8;
+}
+
+/* 消息间距调整 */
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem !important;
+}
+
+/* 主容器样式 */
+.container.mt-5 {
+    margin-top: 2rem !important;
+}
+
+/* 搜索区域样式 */
+.form-select.form-select-sm.me-2,
+.form-control.form-control-sm.me-2 {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+/* 优化按钮组间距 */
+.d-flex.justify-content-start.mt-1,
+.d-flex.justify-content-end.mt-1 {
+    gap: 0.5rem;
+}
+
+/* 消息内容文本样式 */
+.card-body p {
+    margin-bottom: 0.5rem !important;
+    line-height: 1.5;
+}
+
+/* 商品信息卡片样式 */
+.ms-2.me-2.p-2.rounded {
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.ms-2.me-2.p-2.rounded:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
 </style>
 
 <script>
+// 显示Alert通知
+function showAlert(message, duration = 3000) {
+    // 检查是否已有alert元素
+    let alertElement = document.querySelector('.alert');
+    if (!alertElement) {
+        // 创建alert元素
+        alertElement = document.createElement('div');
+        alertElement.className = 'alert alert-success';
+        alertElement.style.position = 'fixed';
+        alertElement.style.top = '20px';
+        alertElement.style.right = '20px';
+        alertElement.style.zIndex = '1030';
+        alertElement.style.minWidth = '300px';
+        alertElement.style.opacity = '1';
+        alertElement.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        alertElement.style.transform = 'translateX(0)';
+        alertElement.style.textAlign = 'center';
+        document.body.appendChild(alertElement);
+    }
+    
+    // 设置Alert内容
+    alertElement.textContent = message;
+    
+    // 显示Alert
+    alertElement.style.display = 'block';
+    
+    // 移除可能存在的fade-out类，确保Alert完全可见
+    alertElement.classList.remove('fade-out');
+    
+    // 3秒后开始淡出
+    setTimeout(() => {
+        alertElement.classList.add('fade-out');
+        // 淡出动画结束后隐藏元素
+        setTimeout(() => {
+            alertElement.style.display = 'none';
+            alertElement.classList.remove('fade-out');
+        }, 500);
+    }, duration);
+}
+
 // 保存滚动位置到localStorage
 function saveScrollPosition() {
     // 使用更精确的选择器
@@ -25,32 +387,23 @@ function saveScrollPosition() {
 
 // 恢复滚动位置
 function restoreScrollPosition() {
-    // 使用更精确的选择器
+    // 使用更精确的选择器获取聊天容器
     const chatContainer = document.querySelector('.card-body[style*="overflow-y: auto"]');
     if (chatContainer) {
-        // 检查是否有新消息标记
+        // 检查URL是否有post_id参数，如果有则不自动滚动到底部（由scrollToPost处理）
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('new_message') === 'true') {
-            // 新消息自动滚动到底部
-            console.log('新消息，滚动到底部');
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            // 清除新消息标记
-            history.replaceState({}, document.title, window.location.pathname);
-        } else {
-            // 否则恢复之前的滚动位置
-            const scrollTop = localStorage.getItem('chatScrollTop');
-            if (scrollTop) {
-                const scrollPosition = parseInt(scrollTop);
-                console.log('恢复滚动位置:', scrollPosition);
-                // 延迟设置滚动位置，确保所有内容都已加载
-                setTimeout(function() {
-                    chatContainer.scrollTop = scrollPosition;
-                }, 200);
-            } else {
-                // 如果没有保存的位置，默认滚动到底部
-                console.log('没有保存的滚动位置，滚动到底部');
+        const postId = urlParams.get('post_id');
+        
+        if (!postId) {
+            // 没有post_id参数，进入广场页面自动滚动到底部
+            console.log('进入广场页面，自动滚动聊天容器到底部');
+            
+            // 使用setTimeout确保所有内容都已加载完成
+            setTimeout(function() {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
+            }, 100);
+        } else {
+            console.log('URL中有post_id参数，将由scrollToPost处理滚动定位');
         }
     } else {
         console.error('未找到聊天容器元素');
@@ -86,18 +439,165 @@ function toggleReplies(postId, totalReplies) {
 // 定位到指定帖子
 function scrollToPost(postId) {
     const postElement = document.getElementById(`post-${postId}`);
-    if (postElement) {
-        // 滚动到帖子位置，顶部留出50px间距
-        window.scrollTo({
-            top: postElement.offsetTop - 50,
+    const chatContainer = document.querySelector('.card-body[style*="overflow-y: auto"]');
+    if (postElement && chatContainer) {
+        // 计算帖子在聊天容器内的相对位置
+        const postOffsetTop = postElement.offsetTop;
+        const containerScrollTop = chatContainer.scrollTop;
+        const scrollPosition = postOffsetTop - 50;
+        
+        // 只在聊天容器内滚动
+        chatContainer.scrollTo({
+            top: scrollPosition,
             behavior: 'smooth'
         });
+        
         // 高亮显示帖子
         postElement.style.backgroundColor = '#fff3cd';
         setTimeout(() => {
             postElement.style.backgroundColor = '';
         }, 2000);
     }
+}
+
+// 显示用户信息
+function showUserInfo(userId) {
+    // 可以实现为弹出模态框或跳转到用户主页
+    window.location.href = `/user/${userId}/profile`;
+}
+
+// 切换回复表单显示状态
+function toggleReplyForm(postId, quotedId, quotedType, username) {
+    const replyForm = document.getElementById(`reply-form-${postId}`);
+    const quotedPostIdInput = document.getElementById(`quoted-post-id-${postId}`);
+    const quoteInfo = document.getElementById(`quote-info-${postId}`);
+    
+    if (replyForm) {
+        // 切换回复表单的显示状态
+        replyForm.classList.toggle('d-none');
+        
+        // 设置引用信息
+        if (quotedId && quotedType) {
+            quotedPostIdInput.value = quotedId;
+            if (quoteInfo) {
+                quoteInfo.classList.remove('d-none');
+                quoteInfo.querySelector('p').innerHTML = `<strong>回复:</strong> @${username}`;
+            }
+        } else {
+            quotedPostIdInput.value = '';
+            if (quoteInfo) {
+                quoteInfo.classList.add('d-none');
+            }
+        }
+    }
+}
+
+// @用户功能
+function mentionUser(username) {
+    // 获取主表单的内容字段
+    const contentField = document.querySelector('#content');
+    if (contentField) {
+        // 在光标位置插入@用户名
+        const startPos = contentField.selectionStart;
+        const endPos = contentField.selectionEnd;
+        const textBefore = contentField.value.substring(0, startPos);
+        const textAfter = contentField.value.substring(endPos);
+        contentField.value = textBefore + `@${username} ` + textAfter;
+        
+        // 聚焦并设置光标位置
+        contentField.focus();
+        contentField.selectionStart = contentField.selectionEnd = startPos + username.length + 2;
+    }
+}
+
+// 处理点赞操作
+function handleLikePost(postId, isLiked) {
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    
+    // 显示加载状态
+    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 处理中...';
+    button.disabled = true;
+    
+    // 构造URL
+    const url = `/post/${postId}/like`;
+    
+    // 发送POST请求
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    })
+    .then(() => {
+        // 更新点赞状态和数量
+        const likeCount = parseInt(button.textContent.match(/\d+/)[0]);
+        if (isLiked) {
+            // 取消点赞
+            button.innerHTML = `<i class="fa fa-heart-o"></i> ${likeCount - 1}`;
+            button.classList.remove('liked');
+            showAlert('已取消点赞');
+        } else {
+            // 点赞
+            button.innerHTML = `<i class="fa fa-heart"></i> ${likeCount + 1}`;
+            button.classList.add('liked');
+            showAlert('点赞成功');
+        }
+    })
+    .catch(error => {
+        console.error('点赞失败：', error);
+        button.innerHTML = originalContent;
+        showAlert('操作失败，请稍后重试', 4000);
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
+}
+
+// 处理回复点赞操作
+function handleLikeReply(replyId, isLiked) {
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    
+    // 显示加载状态
+    button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 处理中...';
+    button.disabled = true;
+    
+    // 构造URL
+    const url = `/reply/${replyId}/like`;
+    
+    // 发送POST请求
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    })
+    .then(() => {
+        // 更新点赞状态和数量
+        const likeCount = parseInt(button.textContent.match(/\d+/)[0]);
+        if (isLiked) {
+            // 取消点赞
+            button.innerHTML = `<i class="fa fa-heart-o"></i> ${likeCount - 1}`;
+            button.classList.remove('liked');
+            showAlert('已取消点赞');
+        } else {
+            // 点赞
+            button.innerHTML = `<i class="fa fa-heart"></i> ${likeCount + 1}`;
+            button.classList.add('liked');
+            showAlert('点赞成功');
+        }
+    })
+    .catch(error => {
+        console.error('点赞失败：', error);
+        button.innerHTML = originalContent;
+        showAlert('操作失败，请稍后重试', 4000);
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
 }
 
 // 为所有点赞和回复表单添加提交事件监听器
@@ -171,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <!-- 留言内容 - 淡黄色背景 -->
                                 <div class="bg-warning bg-opacity-25 p-3 rounded">
                                     {% if '商品名称：' in post.content and '商品价格：' in post.content and '商品链接：' in post.content %}
-                    {% set content_lines = (post.content | safe | string()).split('\n') %}
+                    {% set content_lines = (post.content | string()).split('\n') %}
                     {% set pre_content = [] %}
                     {% set item_title = '' %}
                     {% set item_price = '' %}
@@ -208,21 +708,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- 前置内容 -->
                     {% if pre_content | length > 0 %}
-                        <p>{{ pre_content | join('\n') | safe }}</p>
+                        <p>{{ pre_content | join('\n') | e }}</p>
                     {% endif %}
                     
                     <!-- 商品信息 - 只显示文字信息 -->
                     <div class="ms-2 me-2 p-2 rounded" style="background-color: white;">
                         <h5 class="card-title">{{ item_title }}</h5>
                         <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
-                        <p class="card-text text-muted small">库存: {{ item_stock }}</p>
+                        <p class="card-text text-muted small">在售: {{ item_stock }}</p>
                         <p class="card-text text-muted small">卖家: {{ item_seller }}</p>
                         <p class="card-text text-muted small">浏览: {{ item_views }} | 关注: {{ item_follows }}</p>
                         <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>
                     </div>
                 {% else %}
                     <!-- 普通内容 -->
-                    <p>{{ post.content | safe }}</p>
+                    <p>{{ post.content | e }}</p>
                 {% endif %}
                                     
                                     <!-- 图片（如果有） -->
@@ -316,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <small class="text-muted">{{ reply.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
                                             </div>
                                             
-                                            <p class="mb-1 fs-6">{{ reply.content | safe }}</p>
+                                            <p class="mb-1 fs-6">{{ reply.content | e }}</p>
                                         
                                         <!-- 回复的操作按钮 -->
                                         <div class="d-flex justify-content-end mt-1">
@@ -400,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- 留言内容 - 淡灰色背景 -->
                             <div class="bg-light p-3 rounded">
                                 {% if '商品名称：' in post.content and '商品价格：' in post.content and '商品链接：' in post.content %}
-                    {% set content_lines = (post.content | safe | string()).split('\n') %}
+                    {% set content_lines = (post.content | string()).split('\n') %}
                     {% set pre_content = [] %}
                     {% set item_title = '' %}
                     {% set item_price = '' %}
@@ -444,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="ms-2 me-2 p-2 rounded" style="background-color: white;">
                         <h5 class="card-title">{{ item_title }}</h5>
                         <h6 class="card-subtitle mb-2 text-danger fw-bold">{{ item_price }}</h6>
-                        <p class="card-text text-muted small">库存: {{ item_stock }}</p>
+                        <p class="card-text text-muted small">在售: {{ item_stock }}</p>
                         <p class="card-text text-muted small">卖家: {{ item_seller }}</p>
                         <p class="card-text text-muted small">浏览: {{ item_views }} | 关注: {{ item_follows }}</p>
                         <a href="{{ item_link }}" class="btn btn-outline-primary w-100">查看详情</a>

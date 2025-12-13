@@ -7,11 +7,19 @@
     <h2 class="mb-4">通知中心</h2>
     
     {% if notifications %}  
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <form method="POST" action="{{ url_for('main.mark_all_notifications_read') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="fa fa-check"></i> 一键已读
+                </button>
+            </form>
+        </div>
         <div class="list-group">
             {% for notification in notifications %}
                 <a href="{{ url_for('main.notification_redirect', notification_id=notification.id) }}" 
                    class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-primary{% endif %}" 
-                   style="text-decoration: none; color: inherit;">
+                   style="text-decoration: none; color: inherit; display: block; word-break: break-word; overflow: hidden;">
                     <div class="d-flex w-100 justify-content-between">
                         <h5 class="mb-1">
                             {% if notification.notification_type == 'follow_user' %}
@@ -32,11 +40,10 @@
                     </div>
                     <p class="mb-1">{{ notification.content }}</p>
                     <small class="text-muted">
-                        来自: <a href="{{ url_for('main.user_profile', user_id=notification.sender.id) }}" 
-                               class="text-primary clickable-username" 
-                               onclick="showUserInfo({{ notification.sender.id }}); return false;">
+                        来自: <span class="text-primary clickable-username" 
+                                  onclick="event.stopPropagation(); event.preventDefault(); showUserInfo({{ notification.sender.id }});">
                             {{ notification.sender.username }}
-                        </a>
+                        </span>
                     </small>
                 </a>
             {% endfor %}
@@ -49,4 +56,33 @@
         </div>
     {% endif %}
 </div>
+
+<script>
+// 当页面重新获得焦点时刷新通知列表
+let lastHiddenTime = 0;
+const MIN_HIDDEN_TIME = 1000; // 最小隐藏时间（毫秒），避免频繁刷新
+
+// 页面可见性变化事件
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // 页面变为隐藏状态，记录时间
+        lastHiddenTime = Date.now();
+    } else {
+        // 页面变为可见状态，检查隐藏时间
+        const hiddenDuration = Date.now() - lastHiddenTime;
+        if (hiddenDuration >= MIN_HIDDEN_TIME) {
+            // 隐藏时间足够长，刷新页面以获取最新通知
+            window.location.reload();
+        }
+    }
+});
+
+// 页面焦点事件（兼容旧浏览器）
+window.addEventListener('focus', function() {
+    const hiddenDuration = Date.now() - lastHiddenTime;
+    if (hiddenDuration >= MIN_HIDDEN_TIME) {
+        window.location.reload();
+    }
+});
+</script>
 {% endblock %}
