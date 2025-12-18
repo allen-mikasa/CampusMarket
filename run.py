@@ -26,8 +26,11 @@ with app.app_context():
 
 if __name__ == '__main__':
     print("Starting Flask server...")
-    print(f"Debug mode: {app.debug}")
     print(f"Templates folder: {app.template_folder}")
     print(f"Static folder: {app.static_folder}")
-    # 在生产环境中应将debug设置为False
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    
+    # 暂时开启调试模式以便查看错误信息
+    debug_mode = True
+    print(f"Debug mode: {debug_mode}")
+    
+    app.run(debug=debug_mode, host='127.0.0.1', port=5000)

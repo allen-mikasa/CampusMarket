@@ -31,14 +31,21 @@ def save_picture(form_picture, is_avatar=False):
             if not os.path.exists(avatars_folder):
                 os.makedirs(avatars_folder)
             picture_path = os.path.join(avatars_folder, picture_fn)
+            # 头像图片保持125x125像素
+            output_size = (125, 125)
         else:
             picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture_fn)
+            # 商品图片使用更大的尺寸，保持宽高比
+            output_size = (800, 800)
         
         # 调整图片大小
-        output_size = (125, 125)
         i = Image.open(form_picture)
         i.thumbnail(output_size)
-        i.save(picture_path)
+        # 保存图片，对于JPEG格式设置质量参数
+        if f_ext.lower() in ['.jpg', '.jpeg']:
+            i.save(picture_path, quality=85, optimize=True)
+        else:
+            i.save(picture_path)
         
         return picture_fn
     except Exception as e:

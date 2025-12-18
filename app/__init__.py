@@ -39,10 +39,8 @@ def create_app(config_class=Config):
     # 配置应用
     app.config.from_object(config_class)
     
-    # 覆盖数据库路径以保持兼容性
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, '../market.db')
     # 确保上传文件夹路径正确
+    basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['UPLOAD_FOLDER'] = os.path.join(basedir, '../static/uploads')
     
     # 初始化扩展
@@ -53,31 +51,24 @@ def create_app(config_class=Config):
     # 注册蓝图
     app.register_blueprint(main)
     
-    # 上下文处理器
-    from .utils import format_content
-    
+    # 添加全局上下文处理器，用于传递未读通知和消息数量
     @app.context_processor
-    def utility_processor():
-        """
-        添加模板上下文处理器
-        """
-        def get_format_content(content):
-            return format_content(content)
-        
-        return dict(format_content=get_format_content)
-    
-    @app.context_processor
-    def notifications_processor():
-        """
-        添加未读通知数量到模板上下文
-        """
+    def inject_unread_counts():
+        from .models import Notification, Message
         from flask_login import current_user
-        from .models import Notification
         if current_user.is_authenticated:
-            # 获取当前用户的未读通知数量
-            unread_count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-            return dict(unread_notifications_count=unread_count)
-        return dict(unread_notifications_count=0)
+            # 获取未读通知数量
+            unread_notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+            # 获取未读消息数量
+            unread_messages = Message.query.filter_by(receiver_id=current_user.id, is_read=False).count()
+            return {
+                'unread_notifications': unread_notifications,
+                'unread_messages': unread_messages
+            }
+        return {
+            'unread_notifications': 0,
+            'unread_messages': 0
+        }
     
     return app
 

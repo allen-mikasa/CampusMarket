@@ -22,7 +22,7 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False, index=True)
     price = db.Column(db.Float, nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(1000), nullable=False)  # 使用String替代Text，避免SQL Server LOWER函数问题
     image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
@@ -41,7 +41,7 @@ class Follow(db.Model):
 class Request(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False, index=True)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(1000), nullable=False)  # 使用String替代Text，避免SQL Server LOWER函数问题
     price = db.Column(db.Float, nullable=False)
     image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
@@ -51,7 +51,7 @@ class Request(db.Model):
 # 交流广场模型
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
+    content = db.Column(db.String(2000), nullable=False)  # 使用String替代Text，避免SQL Server LOWER函数问题
     image_file = db.Column(db.String(20), nullable=True)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
@@ -142,3 +142,36 @@ class Stock(db.Model):
     date_added = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     user = db.relationship('User', backref='stocks', lazy=True)
+
+# 商品评论模型
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(1000), nullable=False)  # 使用String替代Text，避免SQL Server LOWER函数问题
+    image_file = db.Column(db.String(20), nullable=True)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('item.id'), nullable=False, index=True)
+    user = db.relationship('User', backref='comments', lazy=True)
+    item = db.relationship('Item', backref='comments', lazy=True)
+    # 关联回复和点赞
+    replies = db.relationship('CommentReply', backref='comment', lazy='dynamic', cascade='all, delete-orphan')
+    likes = db.relationship('CommentLike', backref='comment', lazy='dynamic', cascade='all, delete-orphan')
+
+# 评论回复模型
+class CommentReply(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(500), nullable=False)  # 使用String替代Text，避免SQL Server LOWER函数问题
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id', ondelete='CASCADE'), nullable=False, index=True)
+    user = db.relationship('User', backref='comment_replies', lazy=True)
+
+# 评论点赞模型
+class CommentLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date_liked = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id', ondelete='CASCADE'), nullable=False, index=True)
+    user = db.relationship('User', backref='comment_likes', lazy=True)
+    # 确保一个用户只能点赞一次
+    __table_args__ = (db.UniqueConstraint('user_id', 'comment_id', name='_user_comment_like_uc'),)

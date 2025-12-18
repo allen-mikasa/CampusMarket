@@ -7,11 +7,11 @@
 </div>
 <div class="card mb-3">
     <div class="row g-0">
-        <div class="col-md-5">
+        <div class="col-md-5" style="display: flex; align-items: center; justify-content: center; min-height: 400px; overflow: hidden;">
             {% if request.image_file != 'default.jpg' %}
-            <img src="{{ url_for('static', filename='uploads/' + request.image_file) }}" class="img-fluid rounded-start" alt="求购图片">
+            <img src="{{ url_for('static', filename='uploads/' + request.image_file) }}" class="img-fluid rounded-start" style="object-fit: cover; width: 100%; height: 100%;" alt="求购图片">
             {% else %}
-            <div class="bg-warning text-dark d-flex align-items-center justify-content-center h-100" style="min-height: 300px;">
+            <div class="bg-warning text-dark d-flex align-items-center justify-content-center h-100" style="min-height: 300px; width: 100%;">
                 <i class="fa fa-shopping-bag fa-5x"></i>
             </div>
             {% endif %}
@@ -50,6 +50,7 @@
                         <a href="{{ url_for('main.update_request', request_id=request.id) }}" class="btn btn-primary">编辑求购</a>
                         {% endif %}
                         <form action="{{ url_for('main.delete_request', request_id=request.id) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger" onclick="return confirm('确定要删除此求购信息吗？')">删除求购</button>
                         </form>
                     {% endif %}

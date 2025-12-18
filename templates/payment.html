@@ -34,12 +34,7 @@
                     <div class="text-center mb-4">
                         <h5>请使用微信扫码支付</h5>
                         <div class="border p-3 d-inline-block mt-3">
-                            <!-- 模拟支付二维码，实际项目中应该是动态生成的 -->
-                            <div style="width: 200px; height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                                <div style="width: 180px; height: 180px; background-color: white; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center;">
-                                    <span style="color: #6c757d;">支付二维码</span>
-                                </div>
-                            </div>
+                            <img src="{{ url_for('static', filename='uploads/payment_qrcode.png') }}" alt="微信支付二维码" style="width: 200px; height: 200px; object-fit: contain;">
                         </div>
                         <p class="text-muted mt-3">请在5分钟内完成支付</p>
                     </div>

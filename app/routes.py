@@ -2,9 +2,10 @@ from flask import Blueprint, render_template, url_for, flash, redirect, request,
 from flask_login import login_user, current_user, logout_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import traceback
 
-from .models import db, User, Item, Follow, Request, Post, Like, ReplyLike, UserFollow, Reply, Message, Notification, Stock
-from .forms import RegistrationForm, LoginForm, ItemForm, ProfileForm, RequestForm, PostForm, ReplyForm, StockForm
+from .models import db, User, Item, Follow, Request, Post, Like, ReplyLike, UserFollow, Reply, Message, Notification, Stock, Comment, CommentReply, CommentLike
+from .forms import RegistrationForm, LoginForm, ItemForm, ProfileForm, RequestForm, PostForm, ReplyForm, StockForm, CommentForm, CommentReplyForm
 from .utils import save_picture, format_content, get_pagination_data
 
 # 创建蓝图对象
@@ -31,39 +32,74 @@ def market():
     
     # 应用搜索过滤
     if search_query:
-        query = query.filter(Item.title.ilike(f'%{search_query}%') | Item.description.ilike(f'%{search_query}%'))
+        # 完全避免使用LOWER函数，直接使用LIKE操作符
+        # 虽然这可能导致区分大小写，但可以避免SQL Server TEXT类型问题
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            Item.title.like(search_pattern) | 
+            Item.description.like(search_pattern)
+        )
     
-    # 根据排序参数选择排序方式
+    # 应用排序
     if sort_by == 'latest':
         query = query.order_by(Item.date_posted.desc())
     elif sort_by == 'most_followed':
-        # 按关注数排序，需要使用外连接和计数
-        query = query.outerjoin(Follow).group_by(Item.id).order_by(db.func.count(Follow.id).desc())
+        # 使用外连接确保没有关注者的商品也能显示
+        from .models import Follow
+        # SQL Server要求所有非聚合列必须在GROUP BY中，使用子查询方式计算关注数
+        from sqlalchemy import func
+        subquery = db.session.query(Follow.item_id, func.count(Follow.id).label('follow_count')).group_by(Follow.item_id).subquery()
+        query = query.outerjoin(subquery, Item.id == subquery.c.item_id).order_by(func.coalesce(subquery.c.follow_count, 0).desc())
     elif sort_by == 'most_viewed':
         query = query.order_by(Item.views.desc())
+    elif sort_by == 'hottest':
+        # 热度 = 浏览量 * 0.5 + 关注数 * 2 + 销量 * 5
+        from .models import Follow
+        from sqlalchemy import func
+        # 使用子查询计算关注数
+        subquery = db.session.query(Follow.item_id, func.count(Follow.id).label('follow_count')).group_by(Follow.item_id).subquery()
+        # 热度排序，使用COALESCE确保没有关注者的商品热度计算正确
+        query = query.outerjoin(subquery, Item.id == subquery.c.item_id).order_by(
+            (Item.views * 0.5 + func.coalesce(subquery.c.follow_count, 0) * 2 + Item.sales_count * 5).desc()
+        )
+    elif sort_by == 'best_selling':
+        query = query.order_by(Item.sales_count.desc())
     elif sort_by == 'price_asc':
         query = query.order_by(Item.price.asc())
     elif sort_by == 'price_desc':
         query = query.order_by(Item.price.desc())
-    elif sort_by == 'hottest':
-        # 按热度排序：浏览量*1 + 关注量*3 + 已售数量*5
-        query = query.outerjoin(Follow).group_by(Item.id).order_by(
-            (Item.views + db.func.count(Follow.id) * 3 + Item.sales_count * 5).desc()
-        )
-    elif sort_by == 'best_selling':
-        # 按销量排序
-        query = query.order_by(Item.sales_count.desc())
     else:
+        # 默认按最新排序
         query = query.order_by(Item.date_posted.desc())
     
     # 应用分页
     pagination, items = get_pagination_data(query, page, per_page=12)
     
+    # 渲染模板
     return render_template('index.html', items=items, current_sort=sort_by, search_query=search_query, pagination=pagination)
 
 
+@main.route("/test")
+def test():
+    return "Test page - works fine!"
+
+@main.route("/test_auth")
+def test_auth():
+    try:
+        from flask_login import current_user
+        user_info = f"User authenticated: {current_user.is_authenticated}"
+        if current_user.is_authenticated:
+            user_info += f", User ID: {current_user.id}, Username: {current_user.username}"
+        return user_info
+    except Exception as e:
+        import traceback
+        print(f"Test auth error: {e}")
+        traceback.print_exc()
+        return f"Error: {e}"
+
 @main.route("/home")
 def home():
+    """首页路由"""
     return render_template('home.html')
 
 
@@ -73,7 +109,7 @@ def register():
         return redirect(url_for('main.home'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        hashed_password = generate_password_hash(form.password.data)
+        hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256')
         user = User(username=form.username.data, email=form.email.data, 
                     contact=form.contact.data, password=hashed_password)
         db.session.add(user)
@@ -85,17 +121,23 @@ def register():
 
 @main.route("/login", methods=['GET', 'POST'])
 def login():
+    """用户登录路由"""
+    from flask_login import current_user
+    from .forms import LoginForm
+    
     if current_user.is_authenticated:
         return redirect(url_for('main.home'))
+    
     form = LoginForm()
     if form.validate_on_submit():
+        # 查找用户
         user = User.query.filter_by(email=form.email.data).first()
         if user and check_password_hash(user.password, form.password.data):
+            # 登录成功
             login_user(user)
-            flash('登录成功！', 'success')
             return redirect(url_for('main.home'))
-        else:
-            flash('登录失败，请检查邮箱或密码', 'danger')
+    
+    # 渲染登录模板
     return render_template('login.html', title='登录', form=form)
 
 
@@ -130,7 +172,7 @@ def new_item():
         db.session.add(item)
         db.session.commit()
         flash('商品发布成功！', 'success')
-        return redirect(url_for('main.home'))
+        return redirect(url_for('main.market'))
     
     return render_template('create_item.html', title='发布商品', form=form, stocks=user_stocks)
 
@@ -191,15 +233,41 @@ def add_stock_item():
     db.session.add(item)
     db.session.commit()
     flash('商品发布成功！', 'success')
-    return redirect(url_for('main.home'))
+    return redirect(url_for('main.market'))
 
 
-@main.route("/item/<int:item_id>")
+@main.route("/item/<int:item_id>", methods=['GET', 'POST'])
 def item_detail(item_id):
     item = Item.query.get_or_404(item_id)
     item.views += 1
     db.session.commit()
-    return render_template('item_detail.html', title=item.title, item=item)
+    
+    # 评论表单
+    comment_form = CommentForm()
+    
+    # 处理评论提交
+    if comment_form.validate_on_submit() and current_user.is_authenticated:
+        # 处理图片上传
+        image_file = None
+        if comment_form.picture.data:
+            image_file = save_picture(comment_form.picture.data, is_avatar=False)
+        
+        # 创建评论
+        comment = Comment(
+            content=comment_form.content.data,
+            image_file=image_file,
+            user_id=current_user.id,
+            item_id=item.id
+        )
+        db.session.add(comment)
+        db.session.commit()
+        flash('评论发表成功！', 'success')
+        return redirect(url_for('main.item_detail', item_id=item.id))
+    
+    # 获取商品的所有评论，按时间倒序排列
+    comments = Comment.query.filter_by(item_id=item.id).order_by(Comment.date_posted.desc()).all()
+    
+    return render_template('item_detail.html', title=item.title, item=item, comment_form=comment_form, comments=comments)
 
 
 @main.route("/item/<int:item_id>/delete", methods=['POST'])
@@ -266,6 +334,7 @@ def unfollow_item(item_id):
 @main.route("/profile")
 @login_required
 def profile():
+    """个人中心路由"""
     # 创建库存表单对象
     form = StockForm()
     # 获取当前用户发布的所有商品
@@ -319,7 +388,7 @@ def edit_profile():
                 return redirect(url_for('main.edit_profile'))
             
             # 更新密码
-            hashed_password = generate_password_hash(form.new_password.data)
+            hashed_password = generate_password_hash(form.new_password.data, method='pbkdf2:sha256')
             current_user.password = hashed_password
         
         # 更新用户信息
@@ -391,7 +460,13 @@ def requests():
     
     # 应用搜索过滤
     if search_query:
-        query = query.filter(Request.title.ilike(f'%{search_query}%') | Request.description.ilike(f'%{search_query}%'))
+        # 完全避免使用LOWER函数，直接使用LIKE操作符
+        # 虽然这可能导致区分大小写，但可以避免SQL Server TEXT类型问题
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            Request.title.like(search_pattern) | 
+            Request.description.like(search_pattern)
+        )
     
     # 按最新排序
     query = query.order_by(Request.date_posted.desc())
@@ -544,12 +619,15 @@ def square():
     
     # 根据搜索参数和类型过滤帖子
     if search_query:
+        # 完全避免使用LOWER函数，直接使用LIKE操作符
+        # 虽然这可能导致区分大小写，但可以避免SQL Server TEXT类型问题
+        search_pattern = f'%{search_query}%'
         if search_type == 'user':
             # 搜索用户发言（根据用户名搜索）
-            query = Post.query.join(User).filter(User.username.ilike(f'%{search_query}%'))
+            query = Post.query.join(User).filter(User.username.like(search_pattern))
         else:
             # 搜索发言内容
-            query = Post.query.filter(Post.content.ilike(f'%{search_query}%'))
+            query = Post.query.filter(Post.content.like(search_pattern))
     else:
         query = Post.query
     
@@ -1133,7 +1211,72 @@ def forward_request_to_message(request_id):
     return jsonify({'success': True, 'message': '转发成功'})
 
 
-# 直接购买路由
+# 评论回复路由
+@main.route("/comment/<int:comment_id>/reply", methods=['POST'])
+@login_required
+def reply_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    reply_form = CommentReplyForm()
+    
+    if reply_form.validate_on_submit():
+        # 创建回复
+        reply = CommentReply(
+            content=reply_form.content.data,
+            user_id=current_user.id,
+            comment_id=comment.id
+        )
+        db.session.add(reply)
+        db.session.commit()
+        flash('回复发表成功！', 'success')
+    
+    return redirect(url_for('main.item_detail', item_id=comment.item_id))
+
+# 评论点赞路由
+@main.route("/comment/<int:comment_id>/like", methods=['POST'])
+@login_required
+def like_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    
+    # 检查是否已经点赞
+    like = CommentLike.query.filter_by(user_id=current_user.id, comment_id=comment.id).first()
+    
+    if like:
+        # 取消点赞
+        db.session.delete(like)
+        db.session.commit()
+        return jsonify({'success': True, 'liked': False, 'likes_count': comment.likes.count() - 1})
+    else:
+        # 添加点赞
+        like = CommentLike(user_id=current_user.id, comment_id=comment.id)
+        db.session.add(like)
+        db.session.commit()
+        return jsonify({'success': True, 'liked': True, 'likes_count': comment.likes.count()})
+
+# 评论删除路由
+@main.route("/comment/<int:comment_id>/delete", methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    
+    # 检查是否是评论的发布者或管理员
+    if comment.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'success': False, 'message': '您没有权限删除此评论'})
+    
+    try:
+        # 记录删除日志
+        print(f"User {current_user.username} (ID: {current_user.id}) deleted comment {comment.id} at {datetime.utcnow()}")
+        
+        # 删除评论
+        db.session.delete(comment)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '评论删除成功'})
+    except Exception as e:
+        # 回滚事务
+        db.session.rollback()
+        print(f"Error deleting comment {comment.id}: {str(e)}")
+        return jsonify({'success': False, 'message': '删除评论失败，请稍后重试'})
+
 @main.route("/item/<int:item_id>/buy", methods=['POST'])
 @login_required
 def buy_item(item_id):
@@ -1261,14 +1404,18 @@ def rankings():
     return render_template('rankings.html', title='排行榜', items=items[:10], users=users[:10])
 
 
-# 上下文处理器
+# 上下文处理器 - 修复版本
 @main.app_context_processor
 def utility_processors():
-    def notifications_processor():
-        if current_user.is_authenticated:
-            # 获取当前用户的未读通知数量
-            unread_count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
-            return unread_count
-        return 0
+    """添加模板上下文变量"""
+    from flask_login import current_user
     
-    return dict(unread_notifications_count=notifications_processor)
+    # 确保只在请求上下文中使用current_user
+    try:
+        # 添加一个简单的is_authenticated变量
+        return dict(current_user=current_user)
+    except Exception as e:
+        print(f"Error in context processor: {e}")
+        import traceback
+        traceback.print_exc()
+        return dict()

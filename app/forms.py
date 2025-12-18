@@ -80,3 +80,14 @@ class StockForm(FlaskForm):
     description = TextAreaField('物品描述')
     picture = FileField('物品图片', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
     submit = SubmitField('保存库存')
+
+# 评论表单
+class CommentForm(FlaskForm):
+    content = TextAreaField('评论内容', validators=[DataRequired()])
+    picture = FileField('上传图片', validators=[FileAllowed(['jpg', 'png', 'jpeg'])])
+    submit = SubmitField('发表评论')
+
+# 评论回复表单
+class CommentReplyForm(FlaskForm):
+    content = TextAreaField('回复内容', validators=[DataRequired()])
+    submit = SubmitField('发送回复')

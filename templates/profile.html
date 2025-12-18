@@ -252,6 +252,7 @@
                                                 <a href="{{ url_for('main.update_request', request_id=request.id) }}" 
                                                    class="btn btn-outline-success btn-sm">编辑</a>
                                                 <form action="{{ url_for('main.delete_request', request_id=request.id) }}" method="POST" id="delete-request-form-{{ request.id }}">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                     <button type="button" class="btn btn-outline-danger btn-sm" 
                                                             onclick="if(confirm('确定要删除此求购信息吗？')) { document.getElementById('delete-request-form-{{ request.id }}').submit(); }">删除</button>
                                                 </form>

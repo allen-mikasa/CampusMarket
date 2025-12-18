@@ -7,11 +7,11 @@
 </div>
 <div class="card mb-3">
     <div class="row g-0">
-        <div class="col-md-5">
+        <div class="col-md-5" style="display: flex; align-items: center; justify-content: center; min-height: 400px; overflow: hidden;">
             {% if item.image_file != 'default.jpg' %}
-            <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" class="img-fluid rounded-start" alt="...">
+            <img src="{{ url_for('static', filename='uploads/' + item.image_file) }}" class="img-fluid rounded-start" style="object-fit: cover; width: 100%; height: 100%;" alt="...">
             {% else %}
-            <div class="bg-secondary text-white d-flex align-items-center justify-content-center h-100" style="min-height: 300px;">无图片</div>
+            <div class="bg-secondary text-white d-flex align-items-center justify-content-center h-100" style="min-height: 300px; width: 100%;">无图片</div>
             {% endif %}
         </div>
         <div class="col-md-7">
@@ -156,6 +156,155 @@
 <!-- 关注/取消关注成功通知 -->
 <div id="followAlert" class="alert alert-success" role="alert" style="display: none;">
     操作已完成
+</div>
+{% endif %}
+
+<!-- 评论区 -->
+<div class="mt-5 pt-5 border-top border-2 border-primary">
+    <h3 class="mb-4">
+        <i class="fa fa-comments"></i> 商品评论
+        <span class="badge bg-primary ms-2">{{ comments|length }}</span>
+    </h3>
+    
+    <!-- 评论表单 -->
+    {% if current_user.is_authenticated %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">发表评论</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="" enctype="multipart/form-data">
+                {{ comment_form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    {{ comment_form.content.label(class="form-label") }}
+                    {{ comment_form.content(class="form-control", rows=3, placeholder="写下您的评论...") }}
+                    {% if comment_form.content.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in comment_form.content.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    {{ comment_form.picture.label(class="form-label") }}
+                    {{ comment_form.picture(class="form-control") }}
+                    {% if comment_form.picture.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in comment_form.picture.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    {{ comment_form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center mb-4">
+        <i class="fa fa-info-circle"></i> 请先 <a href="{{ url_for('main.login') }}" class="text-primary">登录</a> 后再发表评论
+    </div>
+    {% endif %}
+    
+    <!-- 评论列表 -->
+    {% if comments %}
+        {% for comment in comments %}
+        <div class="card mb-3 shadow-sm hover-shadow">
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                    <img src="{{ url_for('static', filename='uploads/avatars/' + comment.user.avatar) }}" 
+                         alt="{{ comment.user.username }}" 
+                         class="rounded-circle me-3" 
+                         style="width: 50px; height: 50px; object-fit: cover;">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-primary fw-bold">{{ comment.user.username }}</h6>
+                            <small class="text-muted">{{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <p class="mt-2">{{ comment.content }}</p>
+                        
+                        <!-- 评论图片 -->
+                        {% if comment.image_file %}
+                        <div class="mt-2">
+                            <img src="{{ url_for('static', filename='uploads/' + comment.image_file) }}" 
+                                 alt="评论图片" 
+                                 class="img-fluid rounded shadow-sm" 
+                                 style="max-height: 300px; object-fit: cover;">
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 评论操作 -->
+                        <div class="mt-3 d-flex align-items-center gap-3">
+                            <!-- 点赞按钮 -->
+                            <button class="btn btn-outline-primary btn-sm like-btn" 
+                                    data-comment-id="{{ comment.id }}" 
+                                    id="like-btn-{{ comment.id }}">
+                                <i class="fa fa-thumbs-up"></i> 
+                                <span id="likes-count-{{ comment.id }}">{{ comment.likes.count() }}</span>
+                            </button>
+                            
+                            <!-- 回复按钮 -->
+                            <button class="btn btn-outline-secondary btn-sm reply-btn" 
+                                    data-comment-id="{{ comment.id }}">
+                                <i class="fa fa-reply"></i> 回复
+                            </button>
+                            
+                            <!-- 删除按钮 - 仅对评论发布者或管理员可见 -->
+                            {% if current_user.is_authenticated and (comment.user_id == current_user.id or current_user.is_admin) %}
+                            <button class="btn btn-outline-danger btn-sm delete-btn" 
+                                    data-comment-id="{{ comment.id }}">
+                                <i class="fa fa-trash"></i> 删除
+                            </button>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 回复表单 -->
+                        <div class="mt-3 reply-form" id="reply-form-{{ comment.id }}" style="display: none;">
+                            <form method="POST" action="{{ url_for('main.reply_comment', comment_id=comment.id) }}">
+                                {{ comment_form.hidden_tag() }}
+                                <div class="input-group">
+                                    <textarea name="content" class="form-control form-control-sm" rows="2" placeholder="写下您的回复..." required></textarea>
+                                    <button type="submit" class="btn btn-primary btn-sm">发送</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- 回复列表 -->
+                        {% if comment.replies %}
+                        <div class="mt-3 replies-list border-top pt-3">
+                            {% for reply in comment.replies %}
+                            <div class="d-flex align-items-start mb-3">
+                                <img src="{{ url_for('static', filename='uploads/avatars/' + reply.user.avatar) }}" 
+                                     alt="{{ reply.user.username }}" 
+                                     class="rounded-circle me-2" 
+                                     style="width: 30px; height: 30px; object-fit: cover;">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="fw-bold text-primary">{{ reply.user.username }}</small>
+                                        <small class="text-muted">{{ reply.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    <p class="mt-1 small">{{ reply.content }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="fa fa-comment-o fa-5x text-muted mb-3"></i>
+            <h5 class="text-muted">暂无评论</h5>
+            <p class="text-muted">快来发表第一条评论吧！</p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <script>
@@ -406,12 +555,135 @@
             showAlert('转发失败，请稍后重试。');
         });
     }
+    // 处理评论点赞
+    document.addEventListener('DOMContentLoaded', function() {
+        // 点赞按钮点击事件
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const commentId = this.dataset.commentId;
+                const likesCountElement = document.getElementById(`likes-count-${commentId}`);
+                const likeBtn = this;
+                
+                // 发送点赞请求
+                fetch('{{ url_for('main.like_comment', comment_id=1) }}'.replace('1', commentId), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新点赞数量
+                        likesCountElement.textContent = data.likes_count;
+                        
+                        // 更新按钮样式
+                        if (data.liked) {
+                            likeBtn.classList.remove('btn-outline-primary');
+                            likeBtn.classList.add('btn-primary');
+                        } else {
+                            likeBtn.classList.remove('btn-primary');
+                            likeBtn.classList.add('btn-outline-primary');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('点赞失败：', error);
+                    showAlert('点赞失败，请稍后重试。');
+                });
+            });
+        });
+        
+        // 回复按钮点击事件
+        document.querySelectorAll('.reply-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const commentId = this.dataset.commentId;
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                
+                // 切换回复表单的显示/隐藏
+                if (replyForm.style.display === 'none' || replyForm.style.display === '') {
+                    replyForm.style.display = 'block';
+                } else {
+                    replyForm.style.display = 'none';
+                }
+            });
+        });
+        
+        // 删除按钮点击事件
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const commentId = this.dataset.commentId;
+                const cardElement = this.closest('.card');
+                
+                // 显示确认对话框
+                if (confirm('确定要删除这条评论吗？此操作不可恢复')) {
+                    // 发送删除请求
+                    fetch('{{ url_for('main.delete_comment', comment_id=1) }}'.replace('1', commentId), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // 删除成功，移除评论卡片
+                            if (cardElement) {
+                                cardElement.remove();
+                                // 更新评论数量
+                                const commentsCountElement = document.querySelector('.badge.bg-primary.ms-2');
+                                if (commentsCountElement) {
+                                    const currentCount = parseInt(commentsCountElement.textContent);
+                                    commentsCountElement.textContent = currentCount - 1;
+                                }
+                            }
+                            showAlert('评论删除成功！');
+                        } else {
+                            showAlert('删除失败：' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('删除评论失败：', error);
+                        showAlert('删除评论失败，请稍后重试。');
+                    });
+                }
+            });
+        });
+    });
 </script>
 
 <style>
     .max-height-200 {
         max-height: 200px;
     }
+    
+    .border-top {
+        border-top: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color) !important;
+    }
+    
+    .border-primary {
+        border-color: var(--bs-primary) !important;
+    }
+    
+    .border-2 {
+        border-width: 2px !important;
+    }
+    
+    .hover-shadow:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        transition: box-shadow 0.3s ease !important;
+    }
+    
+    .reply-form {
+        transition: all 0.3s ease;
+    }
+    
+    .replies-list {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+    }
 </style>
-{% endif %}
 {% endblock %}
